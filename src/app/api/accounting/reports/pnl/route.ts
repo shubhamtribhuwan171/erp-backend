@@ -23,9 +23,10 @@ export async function GET(request: NextRequest) {
       .in('ledger_entry_id', entries.map(e => e.id))
 
     let revenue = 0, expenses = 0
-    for (const line of lines || []) {
-      if (line.accounts.type === 'revenue') revenue += Number(line.credit_minor || 0) - Number(line.debit_minor || 0)
-      else if (line.accounts.type === 'expense') expenses += Number(line.debit_minor || 0) - Number(line.credit_minor || 0)
+    for (const line of (lines as any[]) || []) {
+      const account = line.accounts as any
+      if (account?.type === 'revenue') revenue += Number(line.credit_minor || 0) - Number(line.debit_minor || 0)
+      else if (account?.type === 'expense') expenses += Number(line.debit_minor || 0) - Number(line.credit_minor || 0)
     }
 
     return successResponse({ totalRevenue: revenue, totalExpenses: expenses, netProfit: revenue - expenses, fromDate, toDate })

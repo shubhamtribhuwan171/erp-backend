@@ -1,31 +1,50 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUser } from '@/lib/auth'
+import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse } from '@/lib/utils'
 import { generateNextCode } from '@/lib/utils'
 import { CreateSalesOrderBody } from '@/lib/types'
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await requirePermission(request, 'sales', 'read')
+    await requireModuleEnabled(user.companyId, 'sales')
+
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
+    const status = searchParams.get('status') || ''
+    const search = searchParams.get('search') || ''
 
-    const { data, error, count } = await supabase
-      .from('sales_orders').select('*', { count: 'exact' })
+    let query = supabase
+      .from('sales_orders')
+      .select(`*, customer:customers(name, code)`, { count: 'exact' })
+      .eq('company_id', user.companyId)
       .order('created_at', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1)
+
+    if (status) query = query.eq('status', status)
+
+    if (search) {
+      // Order number / customer name / customer code
+      query = query.or(`order_no.ilike.%${search}%`)
+    }
+
+    const { data, error, count } = await query.range((page - 1) * limit, page * limit - 1)
 
     if (error) throw error
     return successResponse({ orders: data || [], page, limit, total: count || 0 })
-  } catch (error) { return errorResponse('Failed to fetch orders') }
+  } catch (error) {
+    console.error('Failed to fetch orders:', error)
+    return errorResponse('Failed to fetch orders')
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error: authError } = await getAuthUser(request)
-    if (!user) return errorResponse(authError || 'Unauthorized', 401)
+    const user = await requirePermission(request, 'sales', 'create')
+    await requireModuleEnabled(user.companyId, 'sales')
 
     const supabase = await createClient()
     const body: CreateSalesOrderBody = await request.json()

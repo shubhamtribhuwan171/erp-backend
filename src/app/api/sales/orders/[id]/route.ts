@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse, notFoundResponse } from '@/lib/utils'
 
 // GET /api/sales/orders/[id] - Get order with items
@@ -8,6 +10,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'sales', 'read')
+    await requireModuleEnabled(user.companyId, 'sales')
+
     const { id } = await params
     const supabase = await createClient()
 
@@ -18,6 +23,7 @@ export async function GET(
         customer:customers(code, name, email, phone)
       `)
       .eq('id', id)
+      .eq('company_id', user.companyId)
       .single()
 
     if (error || !order) {
@@ -32,6 +38,7 @@ export async function GET(
         unit:units(name, code)
       `)
       .eq('sales_order_id', id)
+      .eq('company_id', user.companyId)
 
     return successResponse({
       ...order,
@@ -49,6 +56,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'sales', 'update')
+    await requireModuleEnabled(user.companyId, 'sales')
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -58,6 +68,7 @@ export async function PUT(
       .from('sales_orders')
       .select('status')
       .eq('id', id)
+      .eq('company_id', user.companyId)
       .single()
 
     if (existing?.status !== 'draft') {
@@ -75,6 +86,7 @@ export async function PUT(
         notes: body.notes,
       })
       .eq('id', id)
+      .eq('company_id', user.companyId)
       .select()
       .single()
 
@@ -93,6 +105,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'sales', 'update')
+    await requireModuleEnabled(user.companyId, 'sales')
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -110,6 +125,7 @@ export async function PATCH(
       .from('sales_orders')
       .select('status')
       .eq('id', id)
+      .eq('company_id', user.companyId)
       .single()
 
     if (!existing) return notFoundResponse('Order')
@@ -122,6 +138,7 @@ export async function PATCH(
       .from('sales_orders')
       .update({ status })
       .eq('id', id)
+      .eq('company_id', user.companyId)
       .select()
       .single()
 

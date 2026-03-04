@@ -43,6 +43,10 @@ export async function PUT(request: NextRequest) {
         base_currency_code: body.base_currency_code,
         timezone: body.timezone,
         settings: body.settings,
+        // Experience / profile selection
+        industry_type: body.industry_type,
+        profile_version: body.profile_version,
+        features: body.features,
       })
       .eq('id', user.companyId)
       .select()

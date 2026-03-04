@@ -26,9 +26,10 @@ export async function GET(request: NextRequest) {
       .select('debit_minor, credit_minor, accounts:account_id(code, name, type)')
       .in('ledger_entry_id', entries.map(e => e.id))
 
-    const accountMap = new Map()
-    for (const line of lines || []) {
-      const acc = line.accounts
+    const accountMap = new Map<string, any>()
+    for (const line of (lines as any[]) || []) {
+      const acc = line.accounts as any
+      if (!acc?.code) continue
       if (!accountMap.has(acc.code)) {
         accountMap.set(acc.code, { code: acc.code, name: acc.name, type: acc.type, debit: 0, credit: 0 })
       }

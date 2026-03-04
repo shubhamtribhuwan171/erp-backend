@@ -14,7 +14,12 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('stock_transactions')
-      .selectinventory_items(name,('*, item: sku), warehouse:warehouses(name)')
+      .select(`
+        *,
+        item:inventory_items(name, sku),
+        warehouse:warehouses(name, code),
+        unit:units(name, code)
+      `)
       .eq('company_id', user.companyId)
       .order('created_at', { ascending: false })
 

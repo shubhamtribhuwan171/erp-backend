@@ -4,23 +4,35 @@ import { getAuthUser } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/utils'
 import { generateNextCode } from '@/lib/utils'
 import { CreateVendorBody } from '@/lib/types'
+import { requireModuleEnabled } from '@/lib/features'
 
 // GET /api/vendors
 export async function GET(request: NextRequest) {
   try {
+    const { user, error: authError } = await getAuthUser(request)
+    if (!user) return errorResponse(authError || 'Unauthorized', 401)
+
+    await requireModuleEnabled(user.companyId, 'purchases')
+
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
     const search = searchParams.get('search') || ''
 
-    let query = supabase.from('vendors').select('*', { count: 'exact' }).order('name')
+    let query = supabase
+      .from('vendors')
+      .select('*', { count: 'exact' })
+      .eq('company_id', user.companyId)
+      .order('name')
+
     if (search) query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%`)
 
     const { data, error, count } = await query.range((page - 1) * limit, page * limit - 1)
     if (error) throw error
     return successResponse({ vendors: data || [], page, limit, total: count || 0 })
   } catch (error) {
+    console.error('Failed to fetch vendors:', error)
     return errorResponse('Failed to fetch vendors')
   }
 }
@@ -30,6 +42,8 @@ export async function POST(request: NextRequest) {
   try {
     const { user, error: authError } = await getAuthUser(request)
     if (!user) return errorResponse(authError || 'Unauthorized', 401)
+
+    await requireModuleEnabled(user.companyId, 'purchases')
 
     const supabase = await createClient()
     const body: CreateVendorBody = await request.json()

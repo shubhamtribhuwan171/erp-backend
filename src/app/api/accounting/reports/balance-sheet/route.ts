@@ -24,12 +24,13 @@ export async function GET(request: NextRequest) {
       .select('account_id, debit_minor, credit_minor, accounts:account_id(name, type)')
       .in('ledger_entry_id', entries.map(e => e.id))
 
-    const assets = [], liabilities = [], equity = []
-    for (const line of lines || []) {
+    const assets: any[] = [], liabilities: any[] = [], equity: any[] = []
+    for (const line of (lines as any[]) || []) {
       const bal = Number(line.debit_minor || 0) - Number(line.credit_minor || 0)
-      if (line.accounts.type === 'asset' && bal > 0) assets.push({ name: line.accounts.name, amount: bal })
-      else if (line.accounts.type === 'liability') liabilities.push({ name: line.accounts.name, amount: Math.abs(bal) })
-      else if (line.accounts.type === 'equity') equity.push({ name: line.accounts.name, amount: Math.abs(bal) })
+      const account = line.accounts as any
+      if (account?.type === 'asset' && bal > 0) assets.push({ name: account?.name, amount: bal })
+      else if (account?.type === 'liability') liabilities.push({ name: account?.name, amount: Math.abs(bal) })
+      else if (account?.type === 'equity') equity.push({ name: account?.name, amount: Math.abs(bal) })
     }
 
     return successResponse({
