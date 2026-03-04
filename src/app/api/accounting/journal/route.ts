@@ -1,0 +1,26 @@
+import { NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth-rbac'
+import { successResponse, errorResponse } from '@/lib/utils'
+
+export async function GET(request: NextRequest) {
+  try {
+    const { user, error: authError } = await getAuthUser(request)
+    if (!user) return errorResponse('Unauthorized', 401)
+    
+    const supabase = await createClient()
+    
+    const { data, error } = await supabase
+      .from('ledger_entries')
+      .select('*')
+      .eq('company_id', user.companyId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (error) throw error
+    return successResponse({ entries: data || [] })
+  } catch (err: any) {
+    console.error('Journal error:', err)
+    return errorResponse('Failed to fetch journal entries')
+  }
+}
