@@ -1,12 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse } from '@/lib/utils'
 import { generateNextCode } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'purchases', 'read')
+    await requireModuleEnabled(user.companyId, 'purchases')
     const supabase = await createClient()
     
     const { data, error } = await supabase
@@ -26,6 +28,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'purchases', 'create')
+    await requireModuleEnabled(user.companyId, 'purchases')
     const supabase = await createClient()
     const body = await request.json()
 

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse } from '@/lib/utils'
 
 export async function GET(
@@ -9,12 +10,14 @@ export async function GET(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'read')
+    await requireModuleEnabled(user.companyId, 'accounting')
     const { id } = await params
     const supabase = await createClient()
 
     const { data: entry, error } = await supabase
       .from('ledger_entries')
-      .select('*, lines:ledger_lines(*), account:account_id(name, code)')
+      .select('*, lines:ledger_lines(*)')
+      .eq('company_id', user.companyId)
       .eq('id', id)
       .single()
 
@@ -32,6 +35,7 @@ export async function PATCH(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'update')
+    await requireModuleEnabled(user.companyId, 'accounting')
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -39,18 +43,30 @@ export async function PATCH(
     const { action } = body // 'post' or 'void'
 
     if (action === 'post') {
-      const { data, error } = await supabase.from('ledger_entries').update({
-        status: 'posted',
-        posted_at: new Date().toISOString(),
-        posted_by_user_id: user.id,
-      }).eq('id', id).select().single()
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .update({
+          status: 'posted',
+          posted_at: new Date().toISOString(),
+          posted_by_user_id: user.id,
+        })
+        .eq('company_id', user.companyId)
+        .eq('id', id)
+        .select()
+        .single()
 
       if (error) throw error
       return successResponse(data, 'Entry posted')
     } else if (action === 'void') {
-      const { data, error } = await supabase.from('ledger_entries').update({
-        status: 'void',
-      }).eq('id', id).select().single()
+      const { data, error } = await supabase
+        .from('ledger_entries')
+        .update({
+          status: 'void',
+        })
+        .eq('company_id', user.companyId)
+        .eq('id', id)
+        .select()
+        .single()
 
       if (error) throw error
       return successResponse(data, 'Entry voided')

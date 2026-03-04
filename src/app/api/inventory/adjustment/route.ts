@@ -1,12 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse } from '@/lib/utils'
 
 // POST /api/inventory/adjustment - Adjust stock
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'inventory', 'create')
+    await requireModuleEnabled(user.companyId, 'inventory')
     const supabase = await createClient()
     const body = await request.json()
 

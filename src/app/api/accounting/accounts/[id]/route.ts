@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse } from '@/lib/utils'
 
 export async function GET(
@@ -9,12 +10,14 @@ export async function GET(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'read')
+    await requireModuleEnabled(user.companyId, 'accounting')
     const { id } = await params
     const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('accounts')
       .select('*')
+      .eq('company_id', user.companyId)
       .eq('id', id)
       .single()
 
@@ -31,6 +34,7 @@ export async function PUT(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'update')
+    await requireModuleEnabled(user.companyId, 'accounting')
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -38,6 +42,7 @@ export async function PUT(
     const { data, error } = await supabase
       .from('accounts')
       .update({ name: body.name, type: body.type, subtype: body.subtype })
+      .eq('company_id', user.companyId)
       .eq('id', id)
       .select()
       .single()
@@ -55,10 +60,15 @@ export async function DELETE(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'delete')
+    await requireModuleEnabled(user.companyId, 'accounting')
     const { id } = await params
     const supabase = await createClient()
 
-    const { error } = await supabase.from('accounts').delete().eq('id', id)
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('company_id', user.companyId)
+      .eq('id', id)
     if (error) throw error
 
     return successResponse(null, 'Account deleted')
