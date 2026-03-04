@@ -4,7 +4,6 @@ import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse } from '@/lib/utils'
 import { generateNextCode } from '@/lib/utils'
-import { CreatePurchaseOrderBody } from '@/lib/types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,33 +40,51 @@ export async function POST(request: NextRequest) {
     await requireModuleEnabled(user.companyId, 'purchases')
 
     const supabase = await createClient()
-    const body: CreatePurchaseOrderBody = await request.json()
+    const body: any = await request.json()
 
-    const { data: company } = await supabase.from('companies').select('base_currency_code').eq('id', user.companyId).single()
+    const { data: company } = await supabase
+      .from('companies')
+      .select('base_currency_code')
+      .eq('id', user.companyId)
+      .single()
 
     const { data: lastOrder } = await supabase
-      .from('purchase_orders').select('po_no').eq('company_id', user.companyId)
-      .order('po_no', { ascending: false }).limit(1).single()
+      .from('purchase_orders')
+      .select('po_no')
+      .eq('company_id', user.companyId)
+      .order('po_no', { ascending: false })
+      .limit(1)
+      .single()
 
     const poNo = generateNextCode('PO', lastOrder?.po_no || null)
 
-    let subtotal = 0, taxTotal = 0, discountTotal = 0
-    const orderItems = body.items.map((item, index) => {
-      const lineTotal = (item.qty * item.unit_cost_minor) - (item.discount_minor || 0) + (item.tax_minor || 0)
-      subtotal += item.qty * item.unit_cost_minor
-      taxTotal += item.tax_minor || 0
-      discountTotal += item.discount_minor || 0
+    let subtotal = 0,
+      taxTotal = 0,
+      discountTotal = 0
+
+    const orderItems = (body.items || []).map((item: any, index: number) => {
+      const qty = Number(item.qty || 0)
+      const unitCost = Number(item.unit_cost_minor || 0)
+      const discount = Number(item.discount_minor || 0)
+      const tax = Number(item.tax_minor || 0)
+
+      const lineTotal = qty * unitCost - discount + tax
+
+      subtotal += qty * unitCost
+      taxTotal += tax
+      discountTotal += discount
+
       return {
         company_id: user.companyId,
         line_no: index + 1,
         item_id: item.item_id,
         description: item.description,
         warehouse_id: item.warehouse_id,
-        qty: item.qty,
+        qty,
         unit_id: item.unit_id,
-        unit_cost_minor: item.unit_cost_minor,
-        discount_minor: item.discount_minor || 0,
-        tax_minor: item.tax_minor || 0,
+        unit_cost_minor: unitCost,
+        discount_minor: discount,
+        tax_minor: tax,
         line_total_minor: lineTotal,
         received_qty: 0,
       }
@@ -75,24 +92,30 @@ export async function POST(request: NextRequest) {
 
     const totalMinor = subtotal + taxTotal - discountTotal
 
-    const { data: order, error: orderError } = await supabase.from('purchase_orders').insert({
-      company_id: user.companyId,
-      po_no: poNo,
-      vendor_id: body.vendor_id,
-      order_date: body.order_date,
-      expected_receipt_date: body.expected_receipt_date,
-      notes: body.notes,
-      currency_code: company?.base_currency_code || 'INR',
-      subtotal_minor: subtotal,
-      tax_minor: taxTotal,
-      discount_minor: discountTotal,
-      total_minor: totalMinor,
-      created_by_user_id: user.id,
-    }).select().single()
+    const { data: order, error: orderError } = await supabase
+      .from('purchase_orders')
+      .insert({
+        company_id: user.companyId,
+        po_no: poNo,
+        vendor_id: body.vendor_id,
+        order_date: body.order_date,
+        expected_receipt_date: body.expected_receipt_date,
+        notes: body.notes,
+        currency_code: company?.base_currency_code || 'INR',
+        subtotal_minor: subtotal,
+        tax_minor: taxTotal,
+        discount_minor: discountTotal,
+        total_minor: totalMinor,
+        created_by_user_id: user.id,
+      })
+      .select()
+      .single()
 
     if (orderError) throw orderError
 
-    await supabase.from('purchase_order_items').insert(orderItems.map(item => ({ ...item, purchase_order_id: order.id })))
+    if (orderItems.length) {
+      await supabase.from('purchase_order_items').insert(orderItems.map((i: any) => ({ ...i, purchase_order_id: order.id })))
+    }
 
     return successResponse(order, 'Purchase order created')
   } catch (err) {

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse, notFoundResponse } from '@/lib/utils'
 
 // GET /api/inventory/items/[id] - Get single item
@@ -8,6 +10,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'inventory', 'read')
+    await requireModuleEnabled(user.companyId, 'inventory')
+
     const { id } = await params
     const supabase = await createClient()
 
@@ -18,6 +23,7 @@ export async function GET(
         category:inventory_categories(name, code),
         unit:units(name, code)
       `)
+      .eq('company_id', user.companyId)
       .eq('id', id)
       .single()
 
@@ -29,6 +35,7 @@ export async function GET(
     const { data: stockData } = await supabase
       .from('stock_balances')
       .select('*')
+      .eq('company_id', user.companyId)
       .eq('item_id', id)
 
     return successResponse({
@@ -47,6 +54,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'inventory', 'update')
+    await requireModuleEnabled(user.companyId, 'inventory')
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -67,6 +77,7 @@ export async function PUT(
         sale_price_minor: body.sale_price_minor,
         status: body.status,
       })
+      .eq('company_id', user.companyId)
       .eq('id', id)
       .select()
       .single()
@@ -86,6 +97,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'inventory', 'delete')
+    await requireModuleEnabled(user.companyId, 'inventory')
+
     const { id } = await params
     const supabase = await createClient()
 
@@ -93,6 +107,7 @@ export async function DELETE(
     const { data: transactions } = await supabase
       .from('stock_transactions')
       .select('id')
+      .eq('company_id', user.companyId)
       .eq('item_id', id)
       .limit(1)
 
@@ -103,6 +118,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('inventory_items')
       .delete()
+      .eq('company_id', user.companyId)
       .eq('id', id)
 
     if (error) throw error

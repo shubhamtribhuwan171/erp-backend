@@ -121,7 +121,7 @@ export class BaseService<T extends { id: UUID }> {
 // COMPANY-SPECIFIC OPERATIONS
 // ============================================
 
-export class CompanyService<T extends { company_id: UUID }> extends BaseService<T> {
+export class CompanyService<T extends { id: UUID; company_id: UUID }> extends BaseService<T> {
   constructor(table: string, protected companyId: UUID) {
     super(table)
   }

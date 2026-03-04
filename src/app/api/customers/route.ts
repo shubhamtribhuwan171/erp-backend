@@ -4,7 +4,6 @@ import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse } from '@/lib/utils'
 import { generateNextCode } from '@/lib/utils'
-import { CreateCustomerBody } from '@/lib/types'
 
 // GET /api/customers - List all customers
 export async function GET(request: NextRequest) {
@@ -47,14 +46,12 @@ export async function GET(request: NextRequest) {
 // POST /api/customers - Create customer
 export async function POST(request: NextRequest) {
   try {
-    // RBAC: Require create permission on customers
     const user = await requirePermission(request, 'customers', 'create')
     await requireModuleEnabled(user.companyId, 'sales')
 
     const supabase = await createClient()
-    const body: CreateCustomerBody = await request.json()
+    const body: any = await request.json()
 
-    // Generate customer code
     const { data: lastCustomer } = await supabase
       .from('customers')
       .select('code')

@@ -5,15 +5,21 @@ export const DEFAULT_PAGE = 1
 export const DEFAULT_LIMIT = 20
 export const MAX_LIMIT = 100
 
+export type Pagination = { page: number; limit: number; offset: number }
+
 // Parse pagination params safely
-export function getPagination(searchParams: URLSearchParams) {
-  const page = Math.max(1, parseInt(searchParams.get('page') || String(DEFAULT_PAGE)) || DEFAULT_PAGE
-  const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT)) || DEFAULT_LIMIT)
+export function getPagination(searchParams: URLSearchParams): Pagination {
+  const pageRaw = parseInt(searchParams.get('page') || String(DEFAULT_PAGE))
+  const limitRaw = parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT))
+
+  const page = Math.max(1, Number.isFinite(pageRaw) ? pageRaw : DEFAULT_PAGE)
+  const limit = Math.min(MAX_LIMIT, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : DEFAULT_LIMIT))
+
   return { page, limit, offset: (page - 1) * limit }
 }
 
 // Build range for Supabase
-export function getRange(pagination: { page: number, limit: number }) {
+export function getRange(pagination: { page: number; limit: number }): [number, number] {
   const start = (pagination.page - 1) * pagination.limit
   const end = start + pagination.limit - 1
   return [start, end]
@@ -26,24 +32,24 @@ export function cacheKey(...parts: string[]) {
 
 // Cache duration (in ms)
 export const CACHE_DURATIONS = {
-  SHORT: 60 * 1000,      // 1 minute
-  MEDIUM: 5 * 60 * 1000, // 5 minutes  
-  LONG: 30 * 60 * 1000,  // 30 minutes
+  SHORT: 60 * 1000, // 1 minute
+  MEDIUM: 5 * 60 * 1000, // 5 minutes
+  LONG: 30 * 60 * 1000, // 30 minutes
 }
 
 // Simple in-memory cache (for server-side)
-const cache = new Map<string, { data: any; expires: number }>()
+const cache = new Map<string, { data: unknown; expires: number }>()
 
-export function getCached(key: string): any | null {
+export function getCached<T = unknown>(key: string): T | null {
   const entry = cache.get(key)
   if (entry && entry.expires > Date.now()) {
-    return entry.data
+    return entry.data as T
   }
   cache.delete(key)
   return null
 }
 
-export function setCache(key: string, data: any, duration: number = CACHE_DURATIONS.MEDIUM) {
+export function setCache(key: string, data: unknown, duration: number = CACHE_DURATIONS.MEDIUM) {
   cache.set(key, { data, expires: Date.now() + duration })
 }
 

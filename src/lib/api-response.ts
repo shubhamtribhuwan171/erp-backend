@@ -2,10 +2,10 @@
 // API RESPONSE TYPES & HELPERS
 // ============================================
 
-import { MESSAGES } from '../constants'
+import { DEFAULT_LIMIT, DEFAULT_PAGE, MAX_LIMIT, MESSAGES } from './constants'
 
 // Standard API response wrapper
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   message?: string
   data?: T
@@ -13,7 +13,6 @@ export interface ApiResponse<T = any> {
   meta?: PaginationMeta
 }
 
-// Pagination metadata
 export interface PaginationMeta {
   page: number
   limit: number
@@ -21,24 +20,15 @@ export interface PaginationMeta {
   totalPages: number
 }
 
-// Success response factory
-export function successResponse<T>(
-  data?: T,
-  message?: string
-): ApiResponse<T> {
-  return {
-    success: true,
-    message,
-    data,
-  }
+export function successResponse<T>(data?: T, message?: string): ApiResponse<T> {
+  return { success: true, message, data }
 }
 
-// Paginated success response
 export function paginatedResponse<T>(
   data: T[],
   page: number,
   limit: number,
-  total: number
+  total: number,
 ): ApiResponse<T[]> {
   return {
     success: true,
@@ -52,11 +42,10 @@ export function paginatedResponse<T>(
   }
 }
 
-// Error response factory
 export function errorResponse(
   message: string,
   status: number = 400,
-  errors?: Record<string, string[]>
+  errors?: Record<string, string[]>,
 ): Response {
   return Response.json(
     {
@@ -64,32 +53,27 @@ export function errorResponse(
       message,
       errors,
     } as ApiResponse,
-    { status }
+    { status },
   )
 }
 
-// Not found response
 export function notFoundResponse(entity: string = 'Record'): Response {
   return errorResponse(`${entity} not found`, 404)
 }
 
-// Unauthorized response
 export function unauthorizedResponse(message?: string): Response {
   return errorResponse(message || MESSAGES.UNAUTHORIZED, 401)
 }
 
-// Forbidden response
 export function forbiddenResponse(message?: string): Response {
   return errorResponse(message || MESSAGES.FORBIDDEN, 403)
 }
 
-// Validation error response
 export function validationResponse(errors: Record<string, string[]>): Response {
   return errorResponse(MESSAGES.VALIDATION_FAILED, 400, errors)
 }
 
-// Server error response
-export function serverErrorResponse(error?: string): Response {
+export function serverErrorResponse(error?: unknown): Response {
   console.error('Server error:', error)
   return errorResponse(MESSAGES.SERVER_ERROR, 500)
 }
@@ -98,8 +82,6 @@ export function serverErrorResponse(error?: string): Response {
 // REQUEST PARSING HELPERS
 // ============================================
 
-import { DEFAULT_PAGE, DEFAULT_LIMIT, MAX_LIMIT } from '../constants'
-
 export interface ParsedPagination {
   page: number
   limit: number
@@ -107,12 +89,12 @@ export interface ParsedPagination {
 }
 
 export function parsePagination(searchParams: URLSearchParams): ParsedPagination {
-  const page = Math.max(1, parseInt(searchParams.get('page') || String(DEFAULT_PAGE)) || DEFAULT_PAGE
-  const limit = Math.min(
-    MAX_LIMIT,
-    Math.max(1, parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT)) || DEFAULT_LIMIT
-  )
-  
+  const pageRaw = parseInt(searchParams.get('page') || String(DEFAULT_PAGE))
+  const limitRaw = parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT))
+
+  const page = Math.max(1, Number.isFinite(pageRaw) ? pageRaw : DEFAULT_PAGE)
+  const limit = Math.min(MAX_LIMIT, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : DEFAULT_LIMIT))
+
   return {
     page,
     limit,
@@ -127,12 +109,10 @@ export function parseSearch(searchParams: URLSearchParams): string | undefined {
 export function parseFilter<T extends string>(
   searchParams: URLSearchParams,
   key: string,
-  allowedValues: readonly T[]
+  allowedValues: readonly T[],
 ): T | undefined {
   const value = searchParams.get(key)
-  if (value && allowedValues.includes(value as T)) {
-    return value as T
-  }
+  if (value && allowedValues.includes(value as T)) return value as T
   return undefined
 }
 

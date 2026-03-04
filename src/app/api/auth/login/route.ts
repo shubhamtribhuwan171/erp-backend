@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         fullName: userData.full_name || userData.email.split('@')[0],
         role: userData.role,
         companyId: userData.company_id,
-        companyName: userData.companies?.name,
+        companyName: Array.isArray(userData.companies) ? userData.companies[0]?.name : (userData.companies as any)?.name,
       },
       session: {
         access_token: accessToken,

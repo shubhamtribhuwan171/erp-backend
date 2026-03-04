@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/auth-rbac'
+import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse, notFoundResponse } from '@/lib/utils'
 
 // GET /api/customers/[id] - Get single customer
@@ -10,12 +12,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'customers', 'read')
+    await requireModuleEnabled(user.companyId, 'sales')
+
     const { id } = await params
     const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('customers')
       .select('*')
+      .eq('company_id', user.companyId)
       .eq('id', id)
       .single()
 
@@ -35,6 +41,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'customers', 'update')
+    await requireModuleEnabled(user.companyId, 'sales')
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -52,6 +61,7 @@ export async function PUT(
         credit_limit_minor: body.credit_limit_minor,
         status: body.status,
       })
+      .eq('company_id', user.companyId)
       .eq('id', id)
       .select()
       .single()
@@ -70,12 +80,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requirePermission(request, 'customers', 'delete')
+    await requireModuleEnabled(user.companyId, 'sales')
+
     const { id } = await params
     const supabase = await createClient()
 
     const { error } = await supabase
       .from('customers')
       .delete()
+      .eq('company_id', user.companyId)
       .eq('id', id)
 
     if (error) throw error
