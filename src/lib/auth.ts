@@ -1,6 +1,6 @@
 // Auth helper for API routes
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { verifyAuthToken } from '@/lib/jwt'
 
 export interface AuthUser {
   id: string
@@ -19,45 +19,29 @@ export async function getAuthUser(request: Request): Promise<{ user: AuthUser | 
     }
     
     const token = authHeader.substring(7)
-    
-    // Create client with the token in header
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    )
-    
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !userData.user) {
-      return { user: null, error: userError?.message || 'Invalid token' }
+    const payload = verifyAuthToken(token)
+
+    if (!payload) {
+      return { user: null, error: 'Invalid token' }
     }
+
+    const supabase = await createClient()
     
     // Get user profile from our users table
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('company_id, email')
-      .eq('id', userData.user.id)
+      .select('id, company_id, email, is_active')
+      .eq('id', payload.sub)
       .single()
     
-    if (profileError || !profile) {
+    if (profileError || !profile || !profile.is_active) {
       return { user: null, error: 'User profile not found' }
     }
     
     return {
       user: {
-        id: userData.user.id,
-        email: userData.user.email || '',
+        id: profile.id,
+        email: profile.email || payload.email,
         companyId: profile.company_id,
       },
       error: null,

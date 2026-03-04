@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { successResponse, errorResponse } from '@/lib/utils'
+import bcrypt from 'bcryptjs'
 
 // GET /api/settings/users - List users
 export async function GET(request: NextRequest) {
@@ -18,10 +19,11 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     return successResponse({ users: data || [] })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('List users error:', err)
-    if (err.message?.includes('Permission denied')) {
-      return errorResponse(err.message, 403)
+    const message = err instanceof Error ? err.message : 'Failed to list users'
+    if (message.includes('Permission denied')) {
+      return errorResponse(message, 403)
     }
     return errorResponse('Failed to list users')
   }
@@ -34,44 +36,34 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const body = await request.json()
 
-    // Create auth user
-    const adminClient = require('@supabase/supabase-js').createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email: body.email,
-      password: body.password,
-      email_confirm: true,
-    })
-
-    if (authError || !authData.user) {
-      return errorResponse(authError?.message || 'Failed to create user')
+    if (!body.email || !body.password) {
+      return errorResponse('Email and password are required')
     }
+
+    const passwordHash = await bcrypt.hash(body.password, 10)
 
     // Create user profile
     const { data, error } = await supabase.from('users').insert({
-      id: authData.user.id,
       company_id: user.companyId,
-      email: body.email,
-      full_name: body.full_name,
+      email: String(body.email).toLowerCase(),
+      full_name: body.full_name || String(body.email).split('@')[0],
+      password_hash: passwordHash,
+      auth_provider: 'password',
       phone: body.phone,
       role: body.role || 'staff',
       is_admin: body.role === 'owner' || body.role === 'admin',
       created_by_user_id: user.id,
+      status: 'active',
     }).select().single()
 
-    if (error) {
-      await adminClient.auth.admin.deleteUser(authData.user.id)
-      throw error
-    }
+    if (error) throw error
 
     return successResponse(data, 'User created')
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Create user error:', err)
-    if (err.message?.includes('Permission denied')) {
-      return errorResponse(err.message, 403)
+    const message = err instanceof Error ? err.message : 'Failed to create user'
+    if (message.includes('Permission denied')) {
+      return errorResponse(message, 403)
     }
     return errorResponse('Failed to create user')
   }

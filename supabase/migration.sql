@@ -39,6 +39,7 @@ create table users (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references companies(id) on delete cascade,
   email citext not null,
+  full_name text,
   phone text,
   password_hash text,
   auth_provider text not null default 'password',

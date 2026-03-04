@@ -1,6 +1,7 @@
 // Auth helper for API routes with RBAC
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { hasPermission, Module, Permission, MODULE_MAP, getActionFromMethod } from '@/lib/rbac'
+import { verifyAuthToken } from '@/lib/jwt'
 
 export interface AuthUser {
   id: string
@@ -22,46 +23,38 @@ export async function getAuthUser(request: Request): Promise<{ user: AuthUser | 
     }
     
     const token = authHeader.substring(7)
-    
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: { persistSession: false, autoRefreshToken: false },
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      }
-    )
-    
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !userData.user) {
-      return { user: null, error: userError?.message || 'Invalid token' }
+
+    const payload = verifyAuthToken(token)
+    if (!payload) {
+      return { user: null, error: 'Invalid token' }
     }
+
+    const supabase = await createClient()
     
     // Get user profile - just use role field directly
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('id, company_id, email, role, is_admin')
-      .eq('id', userData.user.id)
+      .select('id, company_id, email, role, is_admin, is_active')
+      .eq('id', payload.sub)
       .single()
     
-    if (profileError || !profile) {
+    if (profileError || !profile || !profile.is_active) {
       return { user: null, error: 'User profile not found' }
     }
     
     return {
       user: {
-        id: userData.user.id,
-        email: userData.user.email || '',
+        id: profile.id,
+        email: profile.email || payload.email,
         companyId: profile.company_id,
         role: profile.role || 'staff', // Default to staff if not set
         isAdmin: profile.is_admin || false,
       },
       error: null,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Auth error:', error)
-    return { user: null, error: error.message || 'Authentication failed' }
+    return { user: null, error: error instanceof Error ? error.message : 'Authentication failed' }
   }
 }
 

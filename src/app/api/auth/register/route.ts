@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { successResponse, errorResponse } from '@/lib/utils'
-import { generateNextCode } from '@/lib/utils'
+import { signAuthToken } from '@/lib/jwt'
+import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,6 @@ export async function POST(request: NextRequest) {
       return errorResponse('Email, password, and company name required')
     }
 
-    const supabase = await createClient()
     const adminClient = createAdminClient()
 
     // First create the company (we need its ID for the user)
@@ -29,34 +29,25 @@ export async function POST(request: NextRequest) {
       return errorResponse('Failed to create company: ' + companyError?.message)
     }
 
-    // Create auth user
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    })
-
-    if (authError || !authData.user) {
-      // Cleanup company on failure
-      await adminClient.from('companies').delete().eq('id', companyData.id)
-      return errorResponse('Failed to create user: ' + authError?.message)
-    }
+    const passwordHash = await bcrypt.hash(password, 10)
 
     // Create user profile
     const { error: userError, data: userData } = await adminClient.from('users').insert({
-      id: authData.user.id,
       company_id: companyData.id,
-      email,
-      full_name: fullName || email.split('@')[0],
+      email: String(email).toLowerCase(),
+      full_name: fullName || String(email).split('@')[0],
+      password_hash: passwordHash,
+      auth_provider: 'password',
       role: 'owner',
       is_admin: true,
-    })
+      is_active: true,
+      status: 'active',
+    }).select('id, email, company_id, role, is_admin').single()
 
-    if (userError) {
+    if (userError || !userData) {
       console.error('User profile error:', userError)
-      await adminClient.auth.admin.deleteUser(authData.user.id)
       await adminClient.from('companies').delete().eq('id', companyData.id)
-      return errorResponse('Failed to create user profile: ' + userError.message)
+      return errorResponse('Failed to create user profile: ' + (userError?.message || 'Unknown error'))
     }
 
     // Enable core modules for the company
@@ -73,20 +64,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate session
-    const { data: sessionData } = await adminClient.auth.admin.generateLink({
-      type: 'sign_in',
-      email,
+    const accessToken = signAuthToken({
+      sub: userData.id,
+      email: userData.email,
+      companyId: userData.company_id,
+      role: userData.role,
+      isAdmin: !!userData.is_admin,
     })
-
     return successResponse({
       company: {
         id: companyData.id,
         name: companyData.name,
       },
       user: {
-        id: authData.user.id,
-        email: authData.user.email,
+        id: userData.id,
+        email: userData.email,
+      },
+      session: {
+        access_token: accessToken,
+        token_type: 'bearer',
+        expires_in: 60 * 60 * 24 * 7,
       },
     }, 'Company created successfully')
   } catch (error) {
