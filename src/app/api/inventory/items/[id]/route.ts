@@ -38,9 +38,62 @@ export async function GET(
       .eq('company_id', user.companyId)
       .eq('item_id', id)
 
+    // Get recent stock transactions
+    const { data: transactions } = await supabase
+      .from('stock_transactions')
+      .select(`
+        *,
+        warehouse:warehouses(name, code),
+        reference:sales_orders!stock_transactions_reference_id_fkey(order_no)
+      `)
+      .eq('company_id', user.companyId)
+      .eq('item_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    // Get related purchase orders (where this item appears)
+    const { data: purchaseOrders } = await supabase
+      .from('purchase_order_items')
+      .select(`
+        *,
+        order:purchase_orders(id, po_no, order_date, status, vendor:vendors(name))
+      `)
+      .eq('company_id', user.companyId)
+      .eq('item_id', id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Get related sales orders (where this item appears)
+    const { data: salesOrders } = await supabase
+      .from('sales_order_items')
+      .select(`
+        *,
+        order:sales_orders(id, order_no, order_date, status, customer:customers(name))
+      `)
+      .eq('company_id', user.companyId)
+      .eq('item_id', id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Calculate stats
+    const totalPurchased = purchaseOrders?.reduce((sum: number, po: any) => sum + (po.qty || po.quantity || 0), 0) || 0
+    const totalSold = salesOrders?.reduce((sum: number, so: any) => sum + (so.qty || so.quantity || 0), 0) || 0
+    const totalOnHand = (stockData || []).reduce((sum: number, s: any) => sum + (Number(s.qty_on_hand || s.quantity || 0) || 0), 0)
+
     return successResponse({
       ...data,
       stock: stockData || [],
+      transactions: transactions || [],
+      purchaseOrders: purchaseOrders || [],
+      salesOrders: salesOrders || [],
+      stats: {
+        totalOnHand,
+        totalPurchased,
+        totalSold,
+        reorderLevel: data.reorder_level || 0,
+        reorderQty: data.reorder_qty || 0,
+        needsReorder: totalOnHand <= (data.reorder_level || 0),
+      },
     })
   } catch (error) {
     console.error('Get item error:', error)
