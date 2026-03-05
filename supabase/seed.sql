@@ -287,6 +287,134 @@ BEGIN
   end if;
 END $$;
 
+-- Add line items to seeded Sales Quotations (QUO-0001/QUO-0002)
+DO $$
+DECLARE
+  v_company uuid;
+  v_wh uuid;
+BEGIN
+  select id into v_company from companies where name = 'Acme Manufacturing Pvt Ltd' limit 1;
+  select id into v_wh from warehouses where company_id=v_company order by created_at limit 1;
+  if v_company is null or v_wh is null then return; end if;
+
+  -- QUO-0001
+  if exists (select 1 from sales_orders where company_id=v_company and order_no='QUO-0001') then
+    insert into sales_order_items(company_id, sales_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_price_minor, discount_minor, tax_minor, line_total_minor)
+    select v_company, so.id, x.line_no, ii.id, x.description, v_wh, x.qty, ii.unit_id, x.unit_price_minor, 0, x.tax_minor, x.line_total_minor
+    from sales_orders so
+    join (values
+      (1, 1, 5::numeric, 'Quote line A', 900000::bigint, 162000::bigint, 4662000::bigint),
+      (2, 2, 2::numeric, 'Quote line B', 700000::bigint, 126000::bigint, 1526000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
+    join (select id, unit_id, row_number() over(order by created_at) as rn from inventory_items where company_id=v_company) ii
+      on ii.rn = x.item_rn
+    where so.company_id=v_company and so.order_no='QUO-0001'
+      and not exists (select 1 from sales_order_items soi where soi.sales_order_id=so.id);
+  end if;
+
+  -- QUO-0002
+  if exists (select 1 from sales_orders where company_id=v_company and order_no='QUO-0002') then
+    insert into sales_order_items(company_id, sales_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_price_minor, discount_minor, tax_minor, line_total_minor)
+    select v_company, so.id, x.line_no, ii.id, x.description, v_wh, x.qty, ii.unit_id, x.unit_price_minor, 0, x.tax_minor, x.line_total_minor
+    from sales_orders so
+    join (values
+      (1, 1, 2::numeric, 'Quote line A', 950000::bigint, 171000::bigint, 2071000::bigint),
+      (2, 3, 1::numeric, 'Quote line C', 600000::bigint, 108000::bigint,  708000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
+    join (select id, unit_id, row_number() over(order by created_at) as rn from inventory_items where company_id=v_company) ii
+      on ii.rn = x.item_rn
+    where so.company_id=v_company and so.order_no='QUO-0002'
+      and not exists (select 1 from sales_order_items soi where soi.sales_order_id=so.id);
+  end if;
+END $$;
+
+-- Add line items to seeded Sales Return (SR-0001)
+DO $$
+DECLARE
+  v_company uuid;
+  v_wh uuid;
+BEGIN
+  select id into v_company from companies where name = 'Acme Manufacturing Pvt Ltd' limit 1;
+  select id into v_wh from warehouses where company_id=v_company order by created_at limit 1;
+  if v_company is null or v_wh is null then return; end if;
+
+  if exists (select 1 from sales_orders where company_id=v_company and order_no='SR-0001') then
+    insert into sales_order_items(company_id, sales_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_price_minor, discount_minor, tax_minor, line_total_minor)
+    select v_company, so.id, 1, ii.id, 'Returned item (demo)', v_wh, 1::numeric, ii.unit_id, 600000::bigint, 0, 0, 600000::bigint
+    from sales_orders so
+    join (select id, unit_id from inventory_items where company_id=v_company order by created_at limit 1) ii on true
+    where so.company_id=v_company and so.order_no='SR-0001'
+      and not exists (select 1 from sales_order_items soi where soi.sales_order_id=so.id);
+  end if;
+END $$;
+
+-- Add line items to seeded Purchases docs (GRN/BILL/PR)
+DO $$
+DECLARE
+  v_company uuid;
+  v_wh uuid;
+BEGIN
+  select id into v_company from companies where name = 'Acme Manufacturing Pvt Ltd' limit 1;
+  select id into v_wh from warehouses where company_id=v_company order by created_at limit 1;
+  if v_company is null or v_wh is null then return; end if;
+
+  -- GRN-0001
+  if exists (select 1 from purchase_orders where company_id=v_company and po_no='GRN-0001') then
+    insert into purchase_order_items(company_id, purchase_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_cost_minor, discount_minor, tax_minor, line_total_minor, received_qty)
+    select v_company, po.id, x.line_no, ii.id, x.description, v_wh, x.qty, ii.unit_id, x.unit_cost_minor, 0, 0, x.line_total_minor, x.qty
+    from purchase_orders po
+    join (values
+      (1, 1, 10::numeric, 'GRN item A', 350000::bigint, 3500000::bigint),
+      (2, 2,  5::numeric, 'GRN item B', 380000::bigint, 1900000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_cost_minor, line_total_minor) on true
+    join (select id, unit_id, row_number() over(order by created_at) as rn from inventory_items where company_id=v_company) ii
+      on ii.rn = x.item_rn
+    where po.company_id=v_company and po.po_no='GRN-0001'
+      and not exists (select 1 from purchase_order_items poi where poi.purchase_order_id=po.id);
+  end if;
+
+  -- BILL-0001
+  if exists (select 1 from purchase_orders where company_id=v_company and po_no='BILL-0001') then
+    insert into purchase_order_items(company_id, purchase_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_cost_minor, discount_minor, tax_minor, line_total_minor)
+    select v_company, po.id, x.line_no, ii.id, x.description, v_wh, x.qty, ii.unit_id, x.unit_cost_minor, 0, x.tax_minor, x.line_total_minor
+    from purchase_orders po
+    join (values
+      (1, 1, 6::numeric, 'Bill item A', 1000000::bigint, 180000::bigint, 6180000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_cost_minor, tax_minor, line_total_minor) on true
+    join (select id, unit_id, row_number() over(order by created_at) as rn from inventory_items where company_id=v_company) ii
+      on ii.rn = x.item_rn
+    where po.company_id=v_company and po.po_no='BILL-0001'
+      and not exists (select 1 from purchase_order_items poi where poi.purchase_order_id=po.id);
+  end if;
+
+  -- PR-0001
+  if exists (select 1 from purchase_orders where company_id=v_company and po_no='PR-0001') then
+    insert into purchase_order_items(company_id, purchase_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_cost_minor, discount_minor, tax_minor, line_total_minor)
+    select v_company, po.id, 1, ii.id, 'Returned to vendor (demo)', v_wh, 1::numeric, ii.unit_id, 400000::bigint, 0, 0, 400000::bigint
+    from purchase_orders po
+    join (select id, unit_id from inventory_items where company_id=v_company order by created_at limit 1) ii on true
+    where po.company_id=v_company and po.po_no='PR-0001'
+      and not exists (select 1 from purchase_order_items poi where poi.purchase_order_id=po.id);
+  end if;
+END $$;
+
+-- Seed attendance for today (all active employees -> present)
+DO $$
+DECLARE
+  v_company uuid;
+  v_user uuid;
+BEGIN
+  select id into v_company from companies where name='Acme Manufacturing Pvt Ltd' limit 1;
+  select id into v_user from users where company_id=v_company and role='owner' limit 1;
+  if v_company is null or v_user is null then return; end if;
+
+  insert into attendance_records(company_id, employee_id, attendance_date, status, created_by_user_id)
+  select v_company, e.id, current_date, 'present', v_user
+  from employees e
+  where e.company_id=v_company and e.status='active'
+  on conflict (company_id, employee_id, attendance_date) do nothing;
+END $$;
+
 -- ============================================
 -- Extra stock movements for Inventory screens
 -- ============================================
