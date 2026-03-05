@@ -4,62 +4,70 @@ import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled, requireFeatureEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
 
-// POST /api/inventory/transfer - Transfer stock between warehouses
-export async function POST(request: NextRequest) {
+// GET /api/inventory/transfers - List stock transfers
+export async function GET(request: NextRequest) {
   try {
-    const user = await requirePermission(request, 'inventory', 'create')
+    const user = await requirePermission(request, 'inventory', 'read')
     await requireModuleEnabled(request, user.companyId, 'inventory')
     await requireFeatureEnabled(request, user.companyId, 'inventory.transfers')
     const supabase = createRlsClient(request)
-    const body = await request.json()
 
-    const { from_warehouse_id, to_warehouse_id, item_id, qty, unit_id, notes } = body
+    // Get all transfer transactions grouped by reference_id
+    const { data: txns, error } = await supabase
+      .from('stock_transactions')
+      .select(`
+        *,
+        item:inventory_items(name, sku),
+        from_warehouse:warehouse_from(name, code),
+        to_warehouse:warehouse_to(name, code),
+        created_user:users(name)
+      `)
+      .eq('company_id', user.companyId)
+      .in('txn_type', ['transfer_out', 'transfer_in'])
+      .order('created_at', { ascending: false })
 
-    if (from_warehouse_id === to_warehouse_id) {
-      return errorResponse('Source and destination must be different')
+    if (error) throw error
+
+    // Group by transfer (reference_id)
+    const transfersMap = new Map()
+    
+    for (const txn of txns || []) {
+      const refId = txn.reference_id
+      if (!refId) continue
+      
+      if (!transfersMap.has(refId)) {
+        transfersMap.set(refId, {
+          id: refId,
+          transfer_no: `TRF-${refId.slice(0, 8).toUpperCase()}`,
+          from_warehouse: null,
+          to_warehouse: null,
+          transfer_date: txn.txn_date,
+          status: 'completed',
+          items: [],
+          created_at: txn.created_at,
+        })
+      }
+      
+      const transfer = transfersMap.get(refId)
+      
+      if (txn.txn_type === 'transfer_out') {
+        transfer.from_warehouse = txn.warehouse
+        transfer.status = 'pending'
+      } else {
+        transfer.to_warehouse = txn.warehouse
+      }
+      
+      transfer.items.push({
+        item: txn.item,
+        qty: Math.abs(txn.qty),
+        unit: txn.unit,
+      })
     }
 
-    // Create two transactions: one out, one in
-    const txnDate = new Date().toISOString()
-    const transferId = crypto.randomUUID()
-
-    // Transfer out
-    const { error: outError } = await supabase.from('stock_transactions').insert({
-      company_id: user.companyId,
-      txn_type: 'transfer_out',
-      txn_date: txnDate,
-      item_id,
-      warehouse_id: from_warehouse_id,
-      qty: -Math.abs(qty),
-      unit_id,
-      reference_type: 'transfer',
-      reference_id: transferId,
-      notes: `Transfer to ${to_warehouse_id}: ${notes}`,
-      created_by_user_id: user.id,
-    })
-
-    if (outError) throw outError
-
-    // Transfer in
-    const { error: inError } = await supabase.from('stock_transactions').insert({
-      company_id: user.companyId,
-      txn_type: 'transfer_in',
-      txn_date: txnDate,
-      item_id,
-      warehouse_id: to_warehouse_id,
-      qty: Math.abs(qty),
-      unit_id,
-      reference_type: 'transfer',
-      reference_id: transferId,
-      notes: `Transfer from ${from_warehouse_id}: ${notes}`,
-      created_by_user_id: user.id,
-    })
-
-    if (inError) throw inError
-
-    return successResponse({ transfer_id: transferId }, 'Transfer completed')
+    const transfers = Array.from(transfersMap.values())
+    return successResponse({ transfers })
   } catch (err: any) {
-    console.error('Transfer error:', err)
-    return errorResponse('Failed to complete transfer')
+    console.error('List transfers error:', err)
+    return errorResponse('Failed to list transfers')
   }
 }
