@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
-import {successResponse, errorResponse, handleApiError } from '@/lib/utils'
+import { createClientWithToken } from '@/lib/supabase/server'
+import { successResponse, errorResponse, handleApiError } from '@/lib/utils'
 import { signAuthToken } from '@/lib/jwt'
-import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,73 +11,39 @@ export async function POST(request: NextRequest) {
       return errorResponse('Email, password, and company name required')
     }
 
-    const adminClient = createAdminClient()
+    // Use PostgREST RPC with anon key (no JWT yet). Proxy strips anon-key Authorization.
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const supabase = createClientWithToken(anonKey)
 
-    // First create the company (we need its ID for the user)
-    const { data: companyData, error: companyError } = await adminClient
-      .from('companies')
-      .insert({
-        name: companyName,
-        base_currency_code: 'INR',
-        timezone: 'Asia/Kolkata',
-      })
-      .select()
-      .single()
+    const { data: rows, error: rpcError } = await supabase.rpc('rpc_register', {
+      p_email: String(email).toLowerCase(),
+      p_password: String(password),
+      p_company_name: String(companyName),
+      p_full_name: fullName ? String(fullName) : '',
+    })
 
-    if (companyError || !companyData) {
-      return errorResponse('Failed to create company: ' + companyError?.message)
+    if (rpcError || !rows || rows.length === 0) {
+      return errorResponse(rpcError?.message || 'Failed to register', 400)
     }
 
-    const passwordHash = await bcrypt.hash(password, 10)
-
-    // Create user profile
-    const { error: userError, data: userData } = await adminClient.from('users').insert({
-      company_id: companyData.id,
-      email: String(email).toLowerCase(),
-      full_name: fullName || String(email).split('@')[0],
-      password_hash: passwordHash,
-      auth_provider: 'password',
-      role: 'owner',
-      is_admin: true,
-      is_active: true,
-      status: 'active',
-    }).select('id, email, company_id, role, is_admin').single()
-
-    if (userError || !userData) {
-      console.error('User profile error:', userError)
-      await adminClient.from('companies').delete().eq('id', companyData.id)
-      return errorResponse('Failed to create user profile: ' + (userError?.message || 'Unknown error'))
-    }
-
-    // Enable core modules for the company
-    const { data: modules } = await adminClient.from('modules').select('id').eq('is_core', true)
-    
-    if (modules?.length) {
-      await adminClient.from('company_modules').insert(
-        modules.map(m => ({
-          company_id: companyData.id,
-          module_id: m.id,
-          enabled: true,
-          enabled_at: new Date().toISOString(),
-        }))
-      )
-    }
+    const reg = rows[0] as any
 
     const accessToken = signAuthToken({
-      sub: userData.id,
-      email: userData.email,
-      company_id: userData.company_id,
+      sub: reg.user_id,
+      email: reg.email,
+      company_id: reg.company_id,
       role: 'authenticated',
-      is_admin: !!userData.is_admin,
+      is_admin: true,
     })
+
     return successResponse({
       company: {
-        id: companyData.id,
-        name: companyData.name,
+        id: reg.company_id,
+        name: reg.company_name,
       },
       user: {
-        id: userData.id,
-        email: userData.email,
+        id: reg.user_id,
+        email: reg.email,
       },
       session: {
         access_token: accessToken,

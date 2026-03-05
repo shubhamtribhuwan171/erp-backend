@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
-import {successResponse, errorResponse, unauthorizedResponse, handleApiError } from '@/lib/utils'
+import { createClientWithToken } from '@/lib/supabase/server'
+import { successResponse, errorResponse, unauthorizedResponse, handleApiError } from '@/lib/utils'
 import { signAuthToken } from '@/lib/jwt'
-import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,56 +11,36 @@ export async function POST(request: NextRequest) {
       return errorResponse('Email and password required')
     }
 
-    const supabase = createApiClient()
+    // Use PostgREST RPC with anon key (no JWT yet). Proxy strips anon-key Authorization.
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const supabase = createClientWithToken(anonKey)
 
-    // DB-backed login for local/dev setup
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        email,
-        full_name,
-        role,
-        company_id,
-        is_admin,
-        is_active,
-        password_hash,
-        companies!inner(name)
-      `)
-      .eq('email', String(email).toLowerCase())
-      .single()
+    const { data: rows, error: rpcError } = await supabase.rpc('rpc_login', {
+      p_email: String(email).toLowerCase(),
+      p_password: String(password),
+    })
 
-    if (userError || !userData || !userData.is_active || !userData.password_hash) {
+    if (rpcError || !rows || rows.length === 0) {
       return unauthorizedResponse()
     }
 
-    const passwordValid = await bcrypt.compare(password, userData.password_hash)
-    if (!passwordValid) {
-      return unauthorizedResponse()
-    }
+    const userData = rows[0] as any
 
     const accessToken = signAuthToken({
-      sub: userData.id,
+      sub: userData.user_id,
       email: userData.email,
       company_id: userData.company_id,
       role: 'authenticated',
       is_admin: !!userData.is_admin,
     })
 
-    // Update last login
-    await supabase
-      .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', userData.id)
-
     return successResponse({
       user: {
-        id: userData.id,
+        id: userData.user_id,
         email: userData.email,
         fullName: userData.full_name || userData.email.split('@')[0],
         role: userData.role,
         companyId: userData.company_id,
-        companyName: Array.isArray(userData.companies) ? userData.companies[0]?.name : (userData.companies as any)?.name,
       },
       session: {
         access_token: accessToken,
