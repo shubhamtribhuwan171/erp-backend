@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
-import { requireModuleEnabled } from '@/lib/features'
+import { requireModuleEnabled, requireFeatureEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'hr', 'read')
     await requireModuleEnabled(user.companyId, 'hr')
+    await requireFeatureEnabled(user.companyId, 'hr.attendance')
     const supabase = createRlsClient(request)
 
     const { searchParams } = new URL(request.url)
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'hr', 'create')
     await requireModuleEnabled(user.companyId, 'hr')
+    await requireFeatureEnabled(user.companyId, 'hr.attendance')
     const supabase = createRlsClient(request)
 
     const body = await request.json()

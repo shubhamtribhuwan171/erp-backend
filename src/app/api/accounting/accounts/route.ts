@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
-import { requireModuleEnabled } from '@/lib/features'
+import { requireModuleEnabled, requireFeatureEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'accounting', 'read')
     await requireModuleEnabled(user.companyId, 'accounting')
+    await requireFeatureEnabled(user.companyId, 'accounting.accounts')
     const supabase = createRlsClient(request)
     
     const { data, error } = await supabase
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'accounting', 'create')
     await requireModuleEnabled(user.companyId, 'accounting')
+    await requireFeatureEnabled(user.companyId, 'accounting.accounts')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

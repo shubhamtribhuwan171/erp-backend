@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
+import { requireFeatureEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
 
 // GET /api/settings/industry-profiles - List available industry profiles
 export async function GET(request: NextRequest) {
   try {
-    // Settings read is sufficient; this is non-sensitive metadata.
-    await requirePermission(request, 'settings', 'read')
+    const user = await requirePermission(request, 'settings', 'read')
+    await requireFeatureEnabled(user.companyId, 'settings.industryProfiles')
     const supabase = createRlsClient(request)
 
     const { data, error } = await supabase
