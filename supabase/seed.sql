@@ -474,4 +474,113 @@ where c.name='Acme Manufacturing Pvt Ltd'
   )
 limit 1;
 
+-- ============================================
+-- Stock movements tied to seeded documents (so ledger feels real)
+-- ============================================
+
+DO $$
+DECLARE
+  v_company uuid;
+  v_user uuid;
+  v_wh uuid;
+BEGIN
+  select id into v_company from companies where name='Acme Manufacturing Pvt Ltd' limit 1;
+  select id into v_user from users where company_id=v_company and role='owner' limit 1;
+  select id into v_wh from warehouses where company_id=v_company order by created_at limit 1;
+
+  if v_company is null or v_user is null or v_wh is null then
+    return;
+  end if;
+
+  -- Purchase receipt -> stock in
+  insert into stock_transactions(company_id, txn_type, txn_date, item_id, warehouse_id, qty, unit_id, unit_cost_minor, reference_type, reference_id, notes, created_by_user_id)
+  select
+    v_company,
+    'purchase_in',
+    now() - interval '3 days',
+    poi.item_id,
+    coalesce(poi.warehouse_id, v_wh),
+    poi.qty,
+    poi.unit_id,
+    poi.unit_cost_minor,
+    'purchase_receipt',
+    po.id,
+    'Seeded from GRN (demo)',
+    v_user
+  from purchase_orders po
+  join purchase_order_items poi on poi.purchase_order_id=po.id and poi.company_id=po.company_id
+  where po.company_id=v_company and po.po_no='GRN-0001'
+    and not exists (
+      select 1 from stock_transactions st
+      where st.company_id=v_company and st.reference_type='purchase_receipt' and st.reference_id=po.id
+    );
+
+  -- Sales invoice -> stock out
+  insert into stock_transactions(company_id, txn_type, txn_date, item_id, warehouse_id, qty, unit_id, reference_type, reference_id, notes, created_by_user_id)
+  select
+    v_company,
+    'sales_out',
+    now() - interval '2 days',
+    soi.item_id,
+    coalesce(soi.warehouse_id, v_wh),
+    -1 * soi.qty,
+    soi.unit_id,
+    'sales_invoice',
+    so.id,
+    'Seeded from Invoice (demo)',
+    v_user
+  from sales_orders so
+  join sales_order_items soi on soi.sales_order_id=so.id and soi.company_id=so.company_id
+  where so.company_id=v_company and so.order_no='INV-0001'
+    and not exists (
+      select 1 from stock_transactions st
+      where st.company_id=v_company and st.reference_type='sales_invoice' and st.reference_id=so.id
+    );
+
+  -- Sales return -> stock in
+  insert into stock_transactions(company_id, txn_type, txn_date, item_id, warehouse_id, qty, unit_id, reference_type, reference_id, notes, created_by_user_id)
+  select
+    v_company,
+    'sales_return_in',
+    now() - interval '1 days',
+    soi.item_id,
+    coalesce(soi.warehouse_id, v_wh),
+    soi.qty,
+    soi.unit_id,
+    'sales_return',
+    so.id,
+    'Seeded from Sales Return (demo)',
+    v_user
+  from sales_orders so
+  join sales_order_items soi on soi.sales_order_id=so.id and soi.company_id=so.company_id
+  where so.company_id=v_company and so.order_no='SR-0001'
+    and not exists (
+      select 1 from stock_transactions st
+      where st.company_id=v_company and st.reference_type='sales_return' and st.reference_id=so.id
+    );
+
+  -- Purchase return -> stock out
+  insert into stock_transactions(company_id, txn_type, txn_date, item_id, warehouse_id, qty, unit_id, unit_cost_minor, reference_type, reference_id, notes, created_by_user_id)
+  select
+    v_company,
+    'purchase_return_out',
+    now() - interval '1 days',
+    poi.item_id,
+    coalesce(poi.warehouse_id, v_wh),
+    -1 * poi.qty,
+    poi.unit_id,
+    poi.unit_cost_minor,
+    'purchase_return',
+    po.id,
+    'Seeded from Purchase Return (demo)',
+    v_user
+  from purchase_orders po
+  join purchase_order_items poi on poi.purchase_order_id=po.id and poi.company_id=po.company_id
+  where po.company_id=v_company and po.po_no='PR-0001'
+    and not exists (
+      select 1 from stock_transactions st
+      where st.company_id=v_company and st.reference_type='purchase_return' and st.reference_id=po.id
+    );
+END $$;
+
 commit;
