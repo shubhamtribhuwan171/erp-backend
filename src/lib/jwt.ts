@@ -3,9 +3,9 @@ import crypto from 'crypto'
 export interface AuthTokenPayload {
   sub: string
   email: string
-  companyId: string
+  company_id: string
   role: string
-  isAdmin: boolean
+  is_admin: boolean
   iat: number
   exp: number
 }

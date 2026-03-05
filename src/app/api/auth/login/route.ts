@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
     const accessToken = signAuthToken({
       sub: userData.id,
       email: userData.email,
-      companyId: userData.company_id,
-      role: userData.role || 'staff',
-      isAdmin: !!userData.is_admin,
+      company_id: userData.company_id,
+      role: 'authenticated',
+      is_admin: !!userData.is_admin,
     })
 
     // Update last login

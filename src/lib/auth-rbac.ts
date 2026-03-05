@@ -11,6 +11,7 @@ export interface AuthUser {
   role: string
   roleId?: string
   isAdmin: boolean
+  dbRole: string
 }
 
 /**
@@ -48,8 +49,9 @@ export async function getAuthUser(request: Request): Promise<{ user: AuthUser | 
         id: profile.id,
         email: profile.email || payload.email,
         companyId: profile.company_id,
-        role: profile.role || 'staff', // Default to staff if not set
+        role: profile.role || 'staff', // app role
         isAdmin: profile.is_admin || false,
+        dbRole: payload.role || 'authenticated', // db/JWT role used by PostgREST
       },
       error: null,
     }
