@@ -29,6 +29,13 @@
 
 ---
 
+## Dev login (local)
+After running seeds, demo users use:
+- Password: Passw0rd!
+
+(Dev-only; do not use in production.)
+
+
 ## 📋 Project Locations
 
 | Component | Path |
