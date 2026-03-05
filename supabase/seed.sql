@@ -581,6 +581,22 @@ BEGIN
       select 1 from stock_transactions st
       where st.company_id=v_company and st.reference_type='purchase_return' and st.reference_id=po.id
     );
+
+  -- INV-0002 -> sales out
+  insert into stock_transactions(company_id, txn_type, txn_date, item_id, warehouse_id, qty, unit_id, reference_type, reference_id, notes, created_by_user_id)
+  select v_company, 'sales_out', now() - interval '2 days', soi.item_id, coalesce(soi.warehouse_id, v_wh), -1 * soi.qty, soi.unit_id, 'sales_invoice', so.id, 'Seeded from Invoice INV-0002 (demo)', v_user
+  from sales_orders so
+  join sales_order_items soi on soi.sales_order_id=so.id and soi.company_id=so.company_id
+  where so.company_id=v_company and so.order_no='INV-0002'
+    and not exists (select 1 from stock_transactions st where st.company_id=v_company and st.reference_type='sales_invoice' and st.reference_id=so.id);
+
+  -- GRN-0002 -> purchase in
+  insert into stock_transactions(company_id, txn_type, txn_date, item_id, warehouse_id, qty, unit_id, unit_cost_minor, reference_type, reference_id, notes, created_by_user_id)
+  select v_company, 'purchase_in', now() - interval '3 days', poi.item_id, coalesce(poi.warehouse_id, v_wh), poi.qty, poi.unit_id, poi.unit_cost_minor, 'purchase_receipt', po.id, 'Seeded from GRN-0002 (demo)', v_user
+  from purchase_orders po
+  join purchase_order_items poi on poi.purchase_order_id=po.id and poi.company_id=po.company_id
+  where po.company_id=v_company and po.po_no='GRN-0002'
+    and not exists (select 1 from stock_transactions st where st.company_id=v_company and st.reference_type='purchase_receipt' and st.reference_id=po.id);
 END $$;
 
 commit;
