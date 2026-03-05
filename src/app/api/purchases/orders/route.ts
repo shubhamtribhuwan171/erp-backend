@@ -7,7 +7,7 @@ import { successResponse, handleApiError, generateNextCode } from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'purchases', 'read')
-    await requireModuleEnabled(user.companyId, 'purchases')
+    await requireModuleEnabled(request, user.companyId, 'purchases')
 
     const supabase = createRlsClient(request)
     const { searchParams } = new URL(request.url)
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'purchases', 'create')
-    await requireModuleEnabled(user.companyId, 'purchases')
+    await requireModuleEnabled(request, user.companyId, 'purchases')
 
     const supabase = createRlsClient(request)
     const body: any = await request.json()

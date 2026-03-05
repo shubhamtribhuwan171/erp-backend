@@ -7,7 +7,7 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'hr', 'read')
-    await requireModuleEnabled(user.companyId, 'hr')
+    await requireModuleEnabled(request, user.companyId, 'hr')
 
     const supabase = createRlsClient(request)
 

@@ -8,7 +8,7 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'settings', 'read')
-    await requireFeatureEnabled(user.companyId, 'settings.industryProfiles')
+    await requireFeatureEnabled(request, user.companyId, 'settings.industryProfiles')
     const supabase = createRlsClient(request)
 
     const { data, error } = await supabase

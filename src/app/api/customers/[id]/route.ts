@@ -13,7 +13,7 @@ export async function GET(
 ) {
   try {
     const user = await requirePermission(request, 'customers', 'read')
-    await requireModuleEnabled(user.companyId, 'sales')
+    await requireModuleEnabled(request, user.companyId, 'sales')
 
     const { id } = await params
     const supabase = createRlsClient(request)
@@ -41,7 +41,7 @@ export async function PUT(
 ) {
   try {
     const user = await requirePermission(request, 'customers', 'update')
-    await requireModuleEnabled(user.companyId, 'sales')
+    await requireModuleEnabled(request, user.companyId, 'sales')
 
     const { id } = await params
     const supabase = createRlsClient(request)
@@ -79,7 +79,7 @@ export async function DELETE(
 ) {
   try {
     const user = await requirePermission(request, 'customers', 'delete')
-    await requireModuleEnabled(user.companyId, 'sales')
+    await requireModuleEnabled(request, user.companyId, 'sales')
 
     const { id } = await params
     const supabase = createRlsClient(request)

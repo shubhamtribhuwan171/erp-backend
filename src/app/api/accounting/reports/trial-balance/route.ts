@@ -7,8 +7,8 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'accounting', 'read')
-    await requireModuleEnabled(user.companyId, 'accounting')
-    await requireFeatureEnabled(user.companyId, 'accounting.reports')
+    await requireModuleEnabled(request, user.companyId, 'accounting')
+    await requireFeatureEnabled(request, user.companyId, 'accounting.reports')
     const supabase = createRlsClient(request)
     const { searchParams } = new URL(request.url)
     const fromDate = searchParams.get('from') || '2026-01-01'

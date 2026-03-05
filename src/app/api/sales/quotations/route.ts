@@ -8,8 +8,8 @@ import {generateNextCode} from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'sales', 'read')
-    await requireModuleEnabled(user.companyId, 'sales')
-    await requireFeatureEnabled(user.companyId, 'sales.quotations')
+    await requireModuleEnabled(request, user.companyId, 'sales')
+    await requireFeatureEnabled(request, user.companyId, 'sales.quotations')
     const supabase = createRlsClient(request)
     
     const { data, error } = await supabase
@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'sales', 'create')
-    await requireModuleEnabled(user.companyId, 'sales')
-    await requireFeatureEnabled(user.companyId, 'sales.quotations')
+    await requireModuleEnabled(request, user.companyId, 'sales')
+    await requireFeatureEnabled(request, user.companyId, 'sales.quotations')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

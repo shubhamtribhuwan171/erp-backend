@@ -9,7 +9,7 @@ import bcrypt from 'bcryptjs'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'users', 'read')
-    await requireFeatureEnabled(user.companyId, 'settings.users')
+    await requireFeatureEnabled(request, user.companyId, 'settings.users')
     const supabase = createRlsClient(request)
 
     const { data, error } = await supabase
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'users', 'create')
-    await requireFeatureEnabled(user.companyId, 'settings.users')
+    await requireFeatureEnabled(request, user.companyId, 'settings.users')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

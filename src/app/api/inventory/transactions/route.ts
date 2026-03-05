@@ -8,8 +8,8 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'inventory', 'read')
-    await requireModuleEnabled(user.companyId, 'inventory')
-    await requireFeatureEnabled(user.companyId, 'inventory.transactions')
+    await requireModuleEnabled(request, user.companyId, 'inventory')
+    await requireFeatureEnabled(request, user.companyId, 'inventory.transactions')
     const supabase = createRlsClient(request)
     const { searchParams } = new URL(request.url)
     const itemId = searchParams.get('item_id')
@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'inventory', 'create')
-    await requireModuleEnabled(user.companyId, 'inventory')
-    await requireFeatureEnabled(user.companyId, 'inventory.transactions')
+    await requireModuleEnabled(request, user.companyId, 'inventory')
+    await requireFeatureEnabled(request, user.companyId, 'inventory.transactions')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

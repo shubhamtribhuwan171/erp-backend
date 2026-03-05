@@ -7,7 +7,7 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requirePermission(request, 'hr', 'read')
-    await requireModuleEnabled(user.companyId, 'hr')
+    await requireModuleEnabled(request, user.companyId, 'hr')
 
     const { id } = await params
     const supabase = createRlsClient(request)
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requirePermission(request, 'hr', 'update')
-    await requireModuleEnabled(user.companyId, 'hr')
+    await requireModuleEnabled(request, user.companyId, 'hr')
 
     const { id } = await params
     const supabase = createRlsClient(request)
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requirePermission(request, 'hr', 'delete')
-    await requireModuleEnabled(user.companyId, 'hr')
+    await requireModuleEnabled(request, user.companyId, 'hr')
 
     const { id } = await params
     const supabase = createRlsClient(request)

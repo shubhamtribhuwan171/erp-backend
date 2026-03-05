@@ -8,8 +8,8 @@ import {generateNextCode} from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'sales', 'read')
-    await requireModuleEnabled(user.companyId, 'sales')
-    await requireFeatureEnabled(user.companyId, 'sales.invoices')
+    await requireModuleEnabled(request, user.companyId, 'sales')
+    await requireFeatureEnabled(request, user.companyId, 'sales.invoices')
     const supabase = createRlsClient(request)
     
     // Invoices are sales_orders with status 'invoiced'
@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'sales', 'create')
-    await requireModuleEnabled(user.companyId, 'sales')
-    await requireFeatureEnabled(user.companyId, 'sales.invoices')
+    await requireModuleEnabled(request, user.companyId, 'sales')
+    await requireFeatureEnabled(request, user.companyId, 'sales.invoices')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

@@ -1,5 +1,5 @@
 // Auth helper for API routes with RBAC
-import { createClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { hasPermission, Module, Permission, MODULE_MAP, getActionFromMethod } from '@/lib/rbac'
 import { verifyAuthToken } from '@/lib/jwt'
 import { httpErrors } from '@/lib/http-error'
@@ -31,7 +31,7 @@ export async function getAuthUser(request: Request): Promise<{ user: AuthUser | 
       return { user: null, error: 'Invalid token' }
     }
 
-    const supabase = await createClient()
+    const supabase = createRlsClient(request)
     
     // Get user profile - just use role field directly
     const { data: profile, error: profileError } = await supabase

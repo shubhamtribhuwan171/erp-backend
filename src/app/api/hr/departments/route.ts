@@ -7,7 +7,7 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'hr', 'read')
-    await requireModuleEnabled(user.companyId, 'hr')
+    await requireModuleEnabled(request, user.companyId, 'hr')
     const supabase = createRlsClient(request)
     const { data, error } = await supabase.from('departments').select('*').eq('company_id', user.companyId).order('name')
     if (error) throw error
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'hr', 'create')
-    await requireModuleEnabled(user.companyId, 'hr')
+    await requireModuleEnabled(request, user.companyId, 'hr')
     const supabase = createRlsClient(request)
     const body = await request.json()
     const { data, error } = await supabase.from('departments').insert({

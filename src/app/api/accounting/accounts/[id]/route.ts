@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'read')
-    await requireModuleEnabled(user.companyId, 'accounting')
+    await requireModuleEnabled(request, user.companyId, 'accounting')
     const { id } = await params
     const supabase = createRlsClient(request)
 
@@ -34,7 +34,7 @@ export async function PUT(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'update')
-    await requireModuleEnabled(user.companyId, 'accounting')
+    await requireModuleEnabled(request, user.companyId, 'accounting')
     const { id } = await params
     const supabase = createRlsClient(request)
     const body = await request.json()
@@ -60,7 +60,7 @@ export async function DELETE(
 ) {
   try {
     const user = await requirePermission(request, 'accounting', 'delete')
-    await requireModuleEnabled(user.companyId, 'accounting')
+    await requireModuleEnabled(request, user.companyId, 'accounting')
     const { id } = await params
     const supabase = createRlsClient(request)
 

@@ -8,8 +8,8 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'inventory', 'create')
-    await requireModuleEnabled(user.companyId, 'inventory')
-    await requireFeatureEnabled(user.companyId, 'inventory.transfers')
+    await requireModuleEnabled(request, user.companyId, 'inventory')
+    await requireFeatureEnabled(request, user.companyId, 'inventory.transfers')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

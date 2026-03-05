@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { httpErrors } from '@/lib/http-error'
 
 export type FeatureModule =
@@ -35,8 +35,8 @@ function deepMerge(base: any, override: any): any {
  *
  * precedence: industry_profiles.default_features < companies.features (override)
  */
-export async function getEffectiveCompanyFeatures(companyId: string): Promise<EffectiveFeatures> {
-  const supabase = await createClient()
+export async function getEffectiveCompanyFeatures(request: Request, companyId: string): Promise<EffectiveFeatures> {
+  const supabase = createRlsClient(request)
 
   const { data: company, error: companyError } = await supabase
     .from('companies')
@@ -58,8 +58,8 @@ export async function getEffectiveCompanyFeatures(companyId: string): Promise<Ef
   return deepMerge(base, override)
 }
 
-export async function isModuleEnabled(companyId: string, module: FeatureModule): Promise<boolean> {
-  const features = await getEffectiveCompanyFeatures(companyId)
+export async function isModuleEnabled(request: Request, companyId: string, module: FeatureModule): Promise<boolean> {
+  const features = await getEffectiveCompanyFeatures(request, companyId)
   const enabled = (features?.modules as any)?.[module]
   // Default allow if not declared.
   return enabled === undefined ? true : Boolean(enabled)
@@ -77,21 +77,21 @@ function getByPath(obj: any, path: string): any {
 }
 
 // Feature flag check. Default allow if not declared (keeps older profiles working).
-export async function isFeatureEnabled(companyId: string, path: string): Promise<boolean> {
-  const features = await getEffectiveCompanyFeatures(companyId)
+export async function isFeatureEnabled(request: Request, companyId: string, path: string): Promise<boolean> {
+  const features = await getEffectiveCompanyFeatures(request, companyId)
   const v = getByPath(features, path)
   return v === undefined ? true : Boolean(v)
 }
 
-export async function requireFeatureEnabled(companyId: string, path: string): Promise<void> {
-  const ok = await isFeatureEnabled(companyId, path)
+export async function requireFeatureEnabled(request: Request, companyId: string, path: string): Promise<void> {
+  const ok = await isFeatureEnabled(request, companyId, path)
   if (!ok) {
     throw httpErrors.forbidden(`Feature disabled: ${path}`)
   }
 }
 
-export async function requireModuleEnabled(companyId: string, module: FeatureModule): Promise<void> {
-  const ok = await isModuleEnabled(companyId, module)
+export async function requireModuleEnabled(request: Request, companyId: string, module: FeatureModule): Promise<void> {
+  const ok = await isModuleEnabled(request, companyId, module)
   if (!ok) {
     // 403 so the frontend can present a proper "module disabled" state.
     throw httpErrors.forbidden(`Module disabled: ${module}`)

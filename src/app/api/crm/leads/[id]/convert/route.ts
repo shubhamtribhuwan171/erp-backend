@@ -7,7 +7,7 @@ import {successResponse, errorResponse} from '@/lib/utils'
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requirePermission(request, 'crm', 'update')
-    await requireModuleEnabled(user.companyId, 'crm')
+    await requireModuleEnabled(request, user.companyId, 'crm')
 
     const { id } = await params
     const supabase = createRlsClient(request)
