@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
-import { requireModuleEnabled } from '@/lib/features'
+import { requireModuleEnabled, requireFeatureEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
 import {generateNextCode} from '@/lib/utils'
 
@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'sales', 'read')
     await requireModuleEnabled(user.companyId, 'sales')
+    await requireFeatureEnabled(user.companyId, 'sales.invoices')
     const supabase = createRlsClient(request)
     
     // Invoices are sales_orders with status 'invoiced'
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'sales', 'create')
     await requireModuleEnabled(user.companyId, 'sales')
+    await requireFeatureEnabled(user.companyId, 'sales.invoices')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

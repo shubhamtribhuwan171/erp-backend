@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
-import { requireModuleEnabled } from '@/lib/features'
+import { requireModuleEnabled, requireFeatureEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
 
 // POST /api/inventory/transfer - Transfer stock between warehouses
@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'inventory', 'create')
     await requireModuleEnabled(user.companyId, 'inventory')
+    await requireFeatureEnabled(user.companyId, 'inventory.transfers')
     const supabase = createRlsClient(request)
     const body = await request.json()
 

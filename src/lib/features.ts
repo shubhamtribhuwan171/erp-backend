@@ -65,6 +65,31 @@ export async function isModuleEnabled(companyId: string, module: FeatureModule):
   return enabled === undefined ? true : Boolean(enabled)
 }
 
+function getByPath(obj: any, path: string): any {
+  if (!obj) return undefined
+  const parts = path.split('.').filter(Boolean)
+  let cur = obj
+  for (const p of parts) {
+    cur = cur?.[p]
+    if (cur === undefined) return undefined
+  }
+  return cur
+}
+
+// Feature flag check. Default allow if not declared (keeps older profiles working).
+export async function isFeatureEnabled(companyId: string, path: string): Promise<boolean> {
+  const features = await getEffectiveCompanyFeatures(companyId)
+  const v = getByPath(features, path)
+  return v === undefined ? true : Boolean(v)
+}
+
+export async function requireFeatureEnabled(companyId: string, path: string): Promise<void> {
+  const ok = await isFeatureEnabled(companyId, path)
+  if (!ok) {
+    throw httpErrors.forbidden(`Feature disabled: ${path}`)
+  }
+}
+
 export async function requireModuleEnabled(companyId: string, module: FeatureModule): Promise<void> {
   const ok = await isModuleEnabled(companyId, module)
   if (!ok) {
