@@ -210,6 +210,84 @@ where c.name = 'Acme Manufacturing Pvt Ltd'
   );
 
 -- ============================================
+-- Line items for seeded Sales/Purchases docs
+-- ============================================
+
+-- Add line items to seeded Sales Invoices (INV-0001/INV-0002) so detail pages are useful
+DO $$
+DECLARE
+  v_company uuid;
+  v_wh uuid;
+BEGIN
+  select id into v_company from companies where name = 'Acme Manufacturing Pvt Ltd' limit 1;
+  select id into v_wh from warehouses where company_id=v_company order by created_at limit 1;
+
+  if v_company is null or v_wh is null then
+    return;
+  end if;
+
+  -- INV-0001
+  if exists (select 1 from sales_orders where company_id=v_company and order_no='INV-0001') then
+    insert into sales_order_items(company_id, sales_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_price_minor, discount_minor, tax_minor, line_total_minor)
+    select
+      v_company,
+      so.id,
+      x.line_no,
+      ii.id,
+      x.description,
+      v_wh,
+      x.qty,
+      ii.unit_id,
+      x.unit_price_minor,
+      0,
+      x.tax_minor,
+      x.line_total_minor
+    from sales_orders so
+    join (
+      select id, unit_id, row_number() over(order by created_at) as rn
+      from inventory_items
+      where company_id=v_company
+    ) ii on ii.rn = x.item_rn
+    join (values
+      (1, 1, 2::numeric, 'Seed item A', 1000000::bigint, 180000::bigint, 2180000::bigint),
+      (2, 2, 1::numeric, 'Seed item B',  800000::bigint, 144000::bigint,  944000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
+    where so.company_id=v_company and so.order_no='INV-0001'
+      and not exists (select 1 from sales_order_items soi where soi.sales_order_id=so.id);
+  end if;
+
+  -- INV-0002
+  if exists (select 1 from sales_orders where company_id=v_company and order_no='INV-0002') then
+    insert into sales_order_items(company_id, sales_order_id, line_no, item_id, description, warehouse_id, qty, unit_id, unit_price_minor, discount_minor, tax_minor, line_total_minor)
+    select
+      v_company,
+      so.id,
+      x.line_no,
+      ii.id,
+      x.description,
+      v_wh,
+      x.qty,
+      ii.unit_id,
+      x.unit_price_minor,
+      0,
+      x.tax_minor,
+      x.line_total_minor
+    from sales_orders so
+    join (
+      select id, unit_id, row_number() over(order by created_at) as rn
+      from inventory_items
+      where company_id=v_company
+    ) ii on ii.rn = x.item_rn
+    join (values
+      (1, 1, 2::numeric, 'Seed item A', 1100000::bigint, 198000::bigint, 2398000::bigint),
+      (2, 3, 1::numeric, 'Seed item C',  900000::bigint, 162000::bigint, 1062000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
+    where so.company_id=v_company and so.order_no='INV-0002'
+      and not exists (select 1 from sales_order_items soi where soi.sales_order_id=so.id);
+  end if;
+END $$;
+
+-- ============================================
 -- Extra stock movements for Inventory screens
 -- ============================================
 
