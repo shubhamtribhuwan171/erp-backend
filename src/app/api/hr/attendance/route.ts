@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, name, department_id, departments!inner(name)')
+      .select('id, name, department_id, departments:departments!employees_department_id_fkey(name)')
       .eq('company_id', user.companyId)
       .eq('status', 'active')
 
