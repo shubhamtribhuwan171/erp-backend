@@ -40,9 +40,27 @@ export async function GET(
       .eq('purchase_order_id', id)
       .eq('company_id', user.companyId)
 
+    // Get related receipts (GRN)
+    const { data: receipts } = await supabase
+      .from('purchase_receipts')
+      .select('id, receipt_no, receipt_date, status, received_qty')
+      .eq('purchase_order_id', id)
+      .eq('company_id', user.companyId)
+      .order('receipt_date', { ascending: false })
+
+    // Get related vendor invoices
+    const { data: vendorInvoices } = await supabase
+      .from('vendor_invoices')
+      .select('id, invoice_no, invoice_date, status, amount_minor')
+      .eq('purchase_order_id', id)
+      .eq('company_id', user.companyId)
+      .order('invoice_date', { ascending: false })
+
     return successResponse({
       ...order,
       items: items || [],
+      receipts: receipts || [],
+      vendorInvoices: vendorInvoices || [],
     })
   } catch (error) {
     console.error('Get purchase order error:', error)

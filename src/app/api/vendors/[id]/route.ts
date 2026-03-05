@@ -26,7 +26,40 @@ export async function GET(
       return notFoundResponse('Vendor')
     }
 
-    return successResponse(data)
+    // Get purchase orders for this vendor
+    const { data: purchaseOrders } = await supabase
+      .from('purchase_orders')
+      .select('id, po_no, order_date, status, total_minor, subtotal_minor')
+      .eq('vendor_id', id)
+      .eq('company_id', user.companyId)
+      .order('created_at', { ascending: false })
+
+    // Get vendor invoices
+    const { data: vendorInvoices } = await supabase
+      .from('purchase_orders')
+      .select('id, po_no, order_date, status, total_minor')
+      .eq('vendor_id', id)
+      .eq('company_id', user.companyId)
+      .eq('status', 'invoiced')
+      .order('created_at', { ascending: false })
+
+    // Calculate stats
+    const totalSpend = (vendorInvoices || []).reduce((sum: number, o: any) => sum + (o.total_minor || 0), 0)
+    const pendingOrders = (purchaseOrders || []).filter((o: any) => ['draft', 'sent', 'confirmed'].includes(o.status))
+    const pendingValue = pendingOrders.reduce((sum: number, o: any) => sum + (o.total_minor || 0), 0)
+
+    return successResponse({
+      ...data,
+      purchaseOrders: purchaseOrders || [],
+      vendorInvoices: vendorInvoices || [],
+      stats: {
+        totalSpend,
+        orderCount: purchaseOrders?.length || 0,
+        invoiceCount: vendorInvoices?.length || 0,
+        pendingOrdersCount: pendingOrders.length,
+        pendingOrdersValue: pendingValue,
+      },
+    })
   } catch (error) {
     console.error('Get vendor error:', error)
     return handleApiError(error, 'Failed to fetch vendor')}
