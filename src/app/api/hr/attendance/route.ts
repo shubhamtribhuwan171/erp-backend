@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'hr', 'read')
     await requireModuleEnabled(user.companyId, 'hr')
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
 
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date') // yyyy-mm-dd
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'hr', 'create')
     await requireModuleEnabled(user.companyId, 'hr')
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
 
     const body = await request.json()
     const date = body?.date as string | undefined

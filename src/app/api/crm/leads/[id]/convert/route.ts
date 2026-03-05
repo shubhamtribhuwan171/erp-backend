@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await requireModuleEnabled(user.companyId, 'crm')
 
     const { id } = await params
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
 
     // Get lead (tenant-scoped)
     const { data: lead } = await supabase

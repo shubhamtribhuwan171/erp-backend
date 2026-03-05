@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'inventory', 'read')
     await requireModuleEnabled(user.companyId, 'inventory')
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
     const { searchParams } = new URL(request.url)
     const itemId = searchParams.get('item_id')
     const warehouseId = searchParams.get('warehouse_id')
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'inventory', 'create')
     await requireModuleEnabled(user.companyId, 'inventory')
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
     const body = await request.json()
 
     const { data, error } = await supabase.from('stock_transactions').insert({

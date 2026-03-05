@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import {successResponse, errorResponse, notFoundResponse, handleApiError } from '@/lib/utils'
@@ -13,7 +13,7 @@ export async function GET(
     await requireModuleEnabled(user.companyId, 'purchases')
 
     const { id } = await params
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
 
     const { data, error } = await supabase
       .from('vendors')
@@ -41,7 +41,7 @@ export async function PUT(
     await requireModuleEnabled(user.companyId, 'purchases')
 
     const { id } = await params
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
     const body = await request.json()
 
     const { data, error } = await supabase
@@ -79,7 +79,7 @@ export async function DELETE(
     await requireModuleEnabled(user.companyId, 'purchases')
 
     const { id } = await params
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
 
     const { error } = await supabase
       .from('vendors')

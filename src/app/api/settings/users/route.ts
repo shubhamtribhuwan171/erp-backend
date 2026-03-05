@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import {successResponse, errorResponse} from '@/lib/utils'
 import bcrypt from 'bcryptjs'
@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs'
 export async function GET(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'users', 'read')
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
 
     const { data, error } = await supabase
       .from('users')
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requirePermission(request, 'users', 'create')
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
     const body = await request.json()
 
     if (!body.email || !body.password) {

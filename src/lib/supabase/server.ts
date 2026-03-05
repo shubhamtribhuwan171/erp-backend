@@ -37,7 +37,17 @@ export function createAdminClient() {
 }
 
 // API client for our Next.js route handlers.
-// Uses service role so route handlers keep working after enabling RLS.
+// Prefer RLS-enforced client when a user JWT is present.
+// Falls back to anon key (useful for public RPC like login/register).
+export function createRlsClient(request: Request) {
+  const authHeader = request.headers.get('authorization')
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  return createClientWithToken(token)
+}
+
+// Legacy: service-role bypass (keep ONLY for admin/maintenance).
 export function createApiClient() {
   return createAdminClient()
 }

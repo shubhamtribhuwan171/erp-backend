@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import {successResponse, errorResponse} from '@/lib/utils'
@@ -12,7 +12,7 @@ export async function GET(
     const user = await requirePermission(request, 'accounting', 'read')
     await requireModuleEnabled(user.companyId, 'accounting')
     const { id } = await params
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
 
     const { data: entry, error } = await supabase
       .from('ledger_entries')
@@ -37,7 +37,7 @@ export async function PATCH(
     const user = await requirePermission(request, 'accounting', 'update')
     await requireModuleEnabled(user.companyId, 'accounting')
     const { id } = await params
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
     const body = await request.json()
 
     const { action } = body // 'post' or 'void'

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createApiClient } from '@/lib/supabase/server'
+import { createRlsClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, handleApiError, generateNextCode } from '@/lib/utils'
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const user = await requirePermission(request, 'sales', 'read')
     await requireModuleEnabled(user.companyId, 'sales')
 
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(request, 'sales', 'create')
     await requireModuleEnabled(user.companyId, 'sales')
 
-    const supabase = createApiClient()
+    const supabase = createRlsClient(request)
     const body: any = await request.json()
 
     const { data: company } = await supabase
