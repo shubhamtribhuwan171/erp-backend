@@ -40,9 +40,31 @@ export async function GET(
       .eq('sales_order_id', id)
       .eq('company_id', user.companyId)
 
+    // Get related quotation if this order was converted from one
+    let relatedQuotation = null
+    if (order.quotation_id) {
+      const { data: quo } = await supabase
+        .from('sales_orders')
+        .select('id, order_no, order_date, status')
+        .eq('id', order.quotation_id)
+        .single()
+      relatedQuotation = quo
+    }
+
+    // Check if there are any invoices derived from this order
+    const { data: relatedInvoices } = await supabase
+      .from('sales_orders')
+      .select('id, order_no, order_date, status, total_minor')
+      .eq('customer_id', order.customer_id)
+      .eq('company_id', user.companyId)
+      .eq('status', 'invoiced')
+      .gte('created_at', order.created_at)
+
     return successResponse({
       ...order,
       items: items || [],
+      relatedQuotation,
+      relatedInvoices: relatedInvoices || [],
       totals: {
         subtotal_minor: order.subtotal_minor ?? 0,
         discount_minor: order.discount_minor ?? 0,

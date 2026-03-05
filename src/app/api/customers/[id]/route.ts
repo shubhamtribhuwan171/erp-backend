@@ -24,18 +24,38 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return notFoundResponse('Customer')
     }
 
-    // Get orders from this customer
-    const { data: orders } = await supabase
+    // Get all orders (including quotations and invoices which are also sales_orders)
+    const { data: allOrders } = await supabase
       .from('sales_orders')
-      .select('id, order_no, order_date, status, total_minor')
+      .select('id, order_no, order_date, status, total_minor, subtotal_minor, created_at')
       .eq('customer_id', id)
       .eq('company_id', user.companyId)
       .order('created_at', { ascending: false })
-      .limit(20)
+
+    const orders = (allOrders || []).filter((o: any) => !['quotation', 'invoiced'].includes(o.status))
+    const quotations = (allOrders || []).filter((o: any) => o.status === 'quotation')
+    const invoices = (allOrders || []).filter((o: any) => o.status === 'invoiced')
+
+    // Calculate summary stats
+    const totalRevenue = invoices.reduce((sum: number, o: any) => sum + (o.total_minor || 0), 0)
+    const totalOrders = orders.reduce((sum: number, o: any) => sum + (o.total_minor || 0), 0)
+    const pendingOrders = orders.filter((o: any) => ['confirmed', 'shipped'].includes(o.status))
+    const pendingOrdersValue = pendingOrders.reduce((sum: number, o: any) => sum + (o.total_minor || 0), 0)
 
     return successResponse({
       ...customer,
-      orders: orders || [],
+      orders: orders.slice(0, 10),
+      quotations: quotations.slice(0, 5),
+      invoices: invoices.slice(0, 10),
+      stats: {
+        totalRevenue,
+        totalOrdersValue: totalOrders,
+        orderCount: orders.length,
+        quotationCount: quotations.length,
+        invoiceCount: invoices.length,
+        pendingOrdersCount: pendingOrders.length,
+        pendingOrdersValue,
+      },
     })
   } catch (error) {
     console.error('Get customer error:', error)
