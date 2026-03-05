@@ -243,15 +243,15 @@ BEGIN
       x.tax_minor,
       x.line_total_minor
     from sales_orders so
+    join (values
+      (1, 1, 2::numeric, 'Seed item A', 1000000::bigint, 180000::bigint, 2180000::bigint),
+      (2, 2, 1::numeric, 'Seed item B',  800000::bigint, 144000::bigint,  944000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
     join (
       select id, unit_id, row_number() over(order by created_at) as rn
       from inventory_items
       where company_id=v_company
     ) ii on ii.rn = x.item_rn
-    join (values
-      (1, 1, 2::numeric, 'Seed item A', 1000000::bigint, 180000::bigint, 2180000::bigint),
-      (2, 2, 1::numeric, 'Seed item B',  800000::bigint, 144000::bigint,  944000::bigint)
-    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
     where so.company_id=v_company and so.order_no='INV-0001'
       and not exists (select 1 from sales_order_items soi where soi.sales_order_id=so.id);
   end if;
@@ -273,15 +273,15 @@ BEGIN
       x.tax_minor,
       x.line_total_minor
     from sales_orders so
+    join (values
+      (1, 1, 2::numeric, 'Seed item A', 1100000::bigint, 198000::bigint, 2398000::bigint),
+      (2, 3, 1::numeric, 'Seed item C',  900000::bigint, 162000::bigint, 1062000::bigint)
+    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
     join (
       select id, unit_id, row_number() over(order by created_at) as rn
       from inventory_items
       where company_id=v_company
     ) ii on ii.rn = x.item_rn
-    join (values
-      (1, 1, 2::numeric, 'Seed item A', 1100000::bigint, 198000::bigint, 2398000::bigint),
-      (2, 3, 1::numeric, 'Seed item C',  900000::bigint, 162000::bigint, 1062000::bigint)
-    ) as x(line_no, item_rn, qty, description, unit_price_minor, tax_minor, line_total_minor) on true
     where so.company_id=v_company and so.order_no='INV-0002'
       and not exists (select 1 from sales_order_items soi where soi.sales_order_id=so.id);
   end if;
