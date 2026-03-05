@@ -22,7 +22,34 @@ export async function GET(
       .single()
 
     if (error || !data) return errorResponse('Account not found', 404)
-    return successResponse(data)
+
+    // Get ledger entries for this account
+    const { data: ledgerLines } = await supabase
+      .from('ledger_lines')
+      .select(`
+        *,
+        entry:ledger_entries(id, entry_number, date, description, reference, posted_at)
+      `)
+      .eq('company_id', user.companyId)
+      .eq('account_id', id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    // Calculate balance
+    const totalDebit = ledgerLines?.reduce((sum: number, line: any) => sum + (Number(line.debit) || 0), 0) || 0
+    const totalCredit = ledgerLines?.reduce((sum: number, line: any) => sum + (Number(line.credit) || 0), 0) || 0
+    const balance = data.type === 'asset' ? totalDebit - totalCredit : totalCredit - totalDebit
+
+    return successResponse({
+      ...data,
+      ledgerLines: ledgerLines || [],
+      stats: {
+        totalDebit,
+        totalCredit,
+        balance,
+        entryCount: ledgerLines?.length || 0,
+      },
+    })
   } catch (err: any) {
     return errorResponse('Failed to fetch account')
   }

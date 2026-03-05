@@ -22,7 +22,34 @@ export async function GET(
       .single()
 
     if (error || !entry) return errorResponse('Entry not found', 404)
-    return successResponse(entry)
+
+    // Enrich lines with account details
+    const lines = entry.lines || []
+    const accountIds = [...new Set(lines.map((l: any) => l.account_id).filter(Boolean))]
+    
+    if (accountIds.length > 0) {
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('id, name, code, type')
+        .in('id', accountIds)
+      
+      const accountMap = new Map((accounts || []).map((a: any) => [a.id, a]))
+      
+      // Add account info to each line
+      entry.lines = lines.map((line: any) => ({
+        ...line,
+        account: accountMap.get(line.account_id) || null,
+      }))
+    }
+
+    // Calculate totals
+    const totalDebit = lines.reduce((sum: number, l: any) => sum + (Number(l.debit) || 0), 0)
+    const totalCredit = lines.reduce((sum: number, l: any) => sum + (Number(l.credit) || 0), 0)
+
+    return successResponse({
+      ...entry,
+      totals: { totalDebit, totalCredit, isBalanced: totalDebit === totalCredit },
+    })
   } catch (err: any) {
     return errorResponse('Failed to fetch entry')
   }
