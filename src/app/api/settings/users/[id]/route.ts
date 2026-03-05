@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createApiClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import {successResponse, errorResponse} from '@/lib/utils'
 
@@ -11,7 +11,7 @@ export async function GET(
   try {
     const user = await requirePermission(request, 'users', 'read')
     const { id } = await params
-    const supabase = await createClient()
+    const supabase = createApiClient()
 
     const { data, error } = await supabase
       .from('users')
@@ -42,7 +42,7 @@ export async function PUT(
   try {
     const user = await requirePermission(request, 'users', 'update')
     const { id } = await params
-    const supabase = await createClient()
+    const supabase = createApiClient()
     const body = await request.json()
 
     // Can't edit yourself or owner
@@ -89,7 +89,7 @@ export async function DELETE(
       return errorResponse('Cannot delete your own account')
     }
 
-    const supabase = await createClient()
+    const supabase = createApiClient()
     const { error } = await supabase
       .from('users')
       .delete()

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createApiClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import {successResponse, errorResponse, handleApiError } from '@/lib/utils'
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const user = await requirePermission(request, 'inventory', 'read')
     await requireModuleEnabled(user.companyId, 'inventory')
 
-    const supabase = await createClient()
+    const supabase = createApiClient()
     const { data, error } = await supabase
       .from('inventory_categories')
       .select('*')
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(request, 'inventory', 'create')
     await requireModuleEnabled(user.companyId, 'inventory')
 
-    const supabase = await createClient()
+    const supabase = createApiClient()
     const body = await request.json()
 
     const code = body.code || String(body.name || '').substring(0, 3).toUpperCase()

@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
+// SSR client (anon key + cookies). Useful for Server Components/pages.
 export async function createClient() {
   const cookieStore = await cookies()
 
@@ -33,6 +34,12 @@ export function createAdminClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+}
+
+// API client for our Next.js route handlers.
+// Uses service role so route handlers keep working after enabling RLS.
+export function createApiClient() {
+  return createAdminClient()
 }
 
 // Create client with custom auth token (for API routes with Bearer token)

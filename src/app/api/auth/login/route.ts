@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createApiClient } from '@/lib/supabase/server'
 import {successResponse, errorResponse, unauthorizedResponse, handleApiError } from '@/lib/utils'
 import { signAuthToken } from '@/lib/jwt'
 import bcrypt from 'bcryptjs'
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return errorResponse('Email and password required')
     }
 
-    const supabase = await createClient()
+    const supabase = createApiClient()
 
     // DB-backed login for local/dev setup
     const { data: userData, error: userError } = await supabase

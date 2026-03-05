@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createApiClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import {successResponse, errorResponse} from '@/lib/utils'
 
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     // Settings read is sufficient; this is non-sensitive metadata.
     await requirePermission(request, 'settings', 'read')
-    const supabase = await createClient()
+    const supabase = createApiClient()
 
     const { data, error } = await supabase
       .from('industry_profiles')

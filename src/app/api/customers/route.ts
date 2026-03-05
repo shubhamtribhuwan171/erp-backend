@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createApiClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
 import { successResponse, errorResponse, handleApiError, generateNextCode } from '@/lib/utils'
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const user = await requirePermission(request, 'customers', 'read')
     await requireModuleEnabled(user.companyId, 'sales')
 
-    const supabase = await createClient()
+    const supabase = createApiClient()
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(request, 'customers', 'create')
     await requireModuleEnabled(user.companyId, 'sales')
 
-    const supabase = await createClient()
+    const supabase = createApiClient()
     const body: any = await request.json()
 
     const { data: lastCustomer } = await supabase
