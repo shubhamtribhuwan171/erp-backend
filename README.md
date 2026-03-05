@@ -29,6 +29,18 @@
 
 ---
 
+## Local RLS + PostgREST (dev)
+This repo uses **DB-enforced multi-tenant RLS** via PostgREST and a custom HS256 JWT.
+
+Requirements:
+- `JWT_SECRET` must be **>= 32 chars** (PostgREST requirement).
+- PostgREST must be started with `PGRST_JWT_SECRET=$JWT_SECRET` and DB roles (anon/authenticated/authenticator).
+
+Notes:
+- `anon` is least-privilege: can only call `rpc_login`/`rpc_register` (no table access).
+- Normal API routes use the user JWT so RLS is enforced end-to-end.
+
+
 ## Dev login (local)
 After running seeds, demo users use:
 - Password: Passw0rd!
