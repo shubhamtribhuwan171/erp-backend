@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse, notFoundResponse } from '@/lib/utils'
+import {successResponse, errorResponse, notFoundResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(
   request: NextRequest,
@@ -29,8 +29,7 @@ export async function GET(
     return successResponse(data)
   } catch (error) {
     console.error('Get vendor error:', error)
-    return errorResponse('Failed to fetch vendor')
-  }
+    return handleApiError(error, 'Failed to fetch vendor')}
 }
 
 export async function PUT(
@@ -68,8 +67,7 @@ export async function PUT(
     return successResponse(data, 'Vendor updated')
   } catch (error) {
     console.error('Update vendor error:', error)
-    return errorResponse('Failed to update vendor')
-  }
+    return handleApiError(error, 'Failed to update vendor')}
 }
 
 export async function DELETE(
@@ -94,6 +92,5 @@ export async function DELETE(
     return successResponse(null, 'Vendor deleted')
   } catch (error) {
     console.error('Delete vendor error:', error)
-    return errorResponse('Failed to delete vendor')
-  }
+    return handleApiError(error, 'Failed to delete vendor')}
 }

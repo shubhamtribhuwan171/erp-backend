@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse } from '@/lib/utils'
+import {successResponse, errorResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,8 +20,7 @@ export async function GET(request: NextRequest) {
     return successResponse(data || [])
   } catch (error) {
     console.error('Failed to fetch warehouses:', error)
-    return errorResponse('Failed to fetch warehouses')
-  }
+    return handleApiError(error, 'Failed to fetch warehouses')}
 }
 
 export async function POST(request: NextRequest) {
@@ -56,6 +55,5 @@ export async function POST(request: NextRequest) {
     return successResponse(data, 'Warehouse created')
   } catch (err) {
     console.error('Failed to create warehouse:', err)
-    return errorResponse('Failed to create warehouse')
-  }
+    return handleApiError(err, 'Failed to create warehouse')}
 }

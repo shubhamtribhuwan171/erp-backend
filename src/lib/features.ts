@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { httpErrors } from '@/lib/http-error'
 
 export type FeatureModule =
   | 'inventory'
@@ -67,6 +68,7 @@ export async function isModuleEnabled(companyId: string, module: FeatureModule):
 export async function requireModuleEnabled(companyId: string, module: FeatureModule): Promise<void> {
   const ok = await isModuleEnabled(companyId, module)
   if (!ok) {
-    throw new Error(`Module disabled: ${module}`)
+    // 403 so the frontend can present a proper "module disabled" state.
+    throw httpErrors.forbidden(`Module disabled: ${module}`)
   }
 }

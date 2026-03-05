@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse } from '@/lib/utils'
+import {successResponse, errorResponse, handleApiError } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,8 +20,7 @@ export async function GET(request: NextRequest) {
     return successResponse(data || [])
   } catch (error) {
     console.error('Failed to fetch categories:', error)
-    return errorResponse('Failed to fetch categories')
-  }
+    return handleApiError(error, 'Failed to fetch categories')}
 }
 
 export async function POST(request: NextRequest) {
@@ -50,6 +49,5 @@ export async function POST(request: NextRequest) {
     return successResponse(data, 'Category created')
   } catch (err) {
     console.error('Failed to create category:', err)
-    return errorResponse('Failed to create category')
-  }
+    return handleApiError(err, 'Failed to create category')}
 }

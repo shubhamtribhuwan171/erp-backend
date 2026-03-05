@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
-import { successResponse, errorResponse } from '@/lib/utils'
+import {successResponse, errorResponse} from '@/lib/utils'
 
 // GET /api/settings/company - Get company settings
 export async function GET(request: NextRequest) {

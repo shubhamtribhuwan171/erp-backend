@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse, notFoundResponse } from '@/lib/utils'
+import {successResponse, errorResponse, notFoundResponse, handleApiError } from '@/lib/utils'
 
 // GET /api/purchases/orders/[id]
 export async function GET(
@@ -46,8 +46,7 @@ export async function GET(
     })
   } catch (error) {
     console.error('Get purchase order error:', error)
-    return errorResponse('Failed to fetch order')
-  }
+    return handleApiError(error, 'Failed to fetch order')}
 }
 
 // PUT /api/purchases/orders/[id]
@@ -92,8 +91,7 @@ export async function PUT(
     return successResponse(data, 'Order updated')
   } catch (error) {
     console.error('Update purchase order error:', error)
-    return errorResponse('Failed to update order')
-  }
+    return handleApiError(error, 'Failed to update order')}
 }
 
 // PATCH /api/purchases/orders/[id] - Update status
@@ -144,6 +142,5 @@ export async function PATCH(
     return successResponse(data, `Order ${status}`)
   } catch (error) {
     console.error('Update purchase order status error:', error)
-    return errorResponse('Failed to update order status')
-  }
+    return handleApiError(error, 'Failed to update order status')}
 }

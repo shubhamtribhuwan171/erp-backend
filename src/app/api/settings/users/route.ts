@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
-import { successResponse, errorResponse } from '@/lib/utils'
+import {successResponse, errorResponse} from '@/lib/utils'
 import bcrypt from 'bcryptjs'
 
 // GET /api/settings/users - List users

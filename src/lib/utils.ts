@@ -140,6 +140,22 @@ export function errorResponse(message: string, status: number = 400) {
   return NextResponse.json({ success: false, message }, { status })
 }
 
+export function handleApiError(error: unknown, fallbackMessage: string = 'Something went wrong') {
+  const status = (error as any)?.status
+  const message = (error as any)?.message
+
+  if (typeof status === 'number' && typeof message === 'string' && message) {
+    return errorResponse(message, status)
+  }
+
+  // Supabase/PostgREST errors usually include `message`
+  if (typeof message === 'string' && message) {
+    return errorResponse(message, 400)
+  }
+
+  return errorResponse(fallbackMessage, 400)
+}
+
 export function unauthorizedResponse(message: string = 'Unauthorized') {
   return NextResponse.json({ success: false, message }, { status: 401 })
 }

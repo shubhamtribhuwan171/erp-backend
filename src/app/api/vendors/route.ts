@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse } from '@/lib/utils'
-import { generateNextCode } from '@/lib/utils'
+import { successResponse, handleApiError, generateNextCode } from '@/lib/utils'
 
 // GET /api/vendors
 export async function GET(request: NextRequest) {
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ vendors: data || [], page, limit, total: count || 0 })
   } catch (error) {
     console.error('Failed to fetch vendors:', error)
-    return errorResponse('Failed to fetch vendors')
+    return handleApiError(error, 'Failed to fetch vendors')
   }
 }
 
@@ -75,6 +74,6 @@ export async function POST(request: NextRequest) {
     return successResponse(data, 'Vendor created')
   } catch (err) {
     console.error('Create vendor error:', err)
-    return errorResponse('Failed to create vendor')
+    return handleApiError(err, 'Failed to create vendor')
   }
 }

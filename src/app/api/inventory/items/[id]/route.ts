@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse, notFoundResponse } from '@/lib/utils'
+import {successResponse, errorResponse, notFoundResponse, handleApiError } from '@/lib/utils'
 
 // GET /api/inventory/items/[id] - Get single item
 export async function GET(
@@ -44,8 +44,7 @@ export async function GET(
     })
   } catch (error) {
     console.error('Get item error:', error)
-    return errorResponse('Failed to fetch item')
-  }
+    return handleApiError(error, 'Failed to fetch item')}
 }
 
 // PUT /api/inventory/items/[id] - Update item
@@ -87,8 +86,7 @@ export async function PUT(
     return successResponse(data, 'Item updated')
   } catch (error) {
     console.error('Update item error:', error)
-    return errorResponse('Failed to update item')
-  }
+    return handleApiError(error, 'Failed to update item')}
 }
 
 // DELETE /api/inventory/items/[id] - Delete item
@@ -126,6 +124,5 @@ export async function DELETE(
     return successResponse(null, 'Item deleted')
   } catch (error) {
     console.error('Delete item error:', error)
-    return errorResponse('Failed to delete item')
-  }
+    return handleApiError(error, 'Failed to delete item')}
 }

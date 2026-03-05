@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { hasPermission, Module, Permission, MODULE_MAP, getActionFromMethod } from '@/lib/rbac'
 import { verifyAuthToken } from '@/lib/jwt'
+import { httpErrors } from '@/lib/http-error'
 
 export interface AuthUser {
   id: string
@@ -64,7 +65,7 @@ export async function getAuthUser(request: Request): Promise<{ user: AuthUser | 
 export async function requireAuth(request: Request): Promise<AuthUser> {
   const { user, error } = await getAuthUser(request)
   if (!user) {
-    throw new Error(error || 'Unauthorized')
+    throw httpErrors.unauthorized(error || 'Unauthorized')
   }
   return user
 }
@@ -80,8 +81,8 @@ export function checkPermission(user: AuthUser, module: string, action: Permissi
   
   const mappedModule = MODULE_MAP[module] as Module
   if (!mappedModule) {
-    // Unknown module - allow for now (could be restrictive)
-    return true
+    // Unknown module - deny by default (safer).
+    return false
   }
   
   return hasPermission(user.role, mappedModule, action)
@@ -101,7 +102,7 @@ export async function requirePermission(
   const requiredAction = action || getActionFromMethod(request.method)
   
   if (!checkPermission(user, module, requiredAction)) {
-    throw new Error(`Permission denied: ${requiredAction} on ${module}`)
+    throw httpErrors.forbidden(`Permission denied: ${requiredAction} on ${module}`)
   }
   
   return user
@@ -114,7 +115,7 @@ export async function requireRole(request: Request, allowedRoles: string[]): Pro
   const user = await requireAuth(request)
   
   if (!allowedRoles.includes(user.role)) {
-    throw new Error(`Role '${user.role}' not allowed. Required: ${allowedRoles.join(', ')}`)
+    throw httpErrors.forbidden(`Role '${user.role}' not allowed. Required: ${allowedRoles.join(', ')}`)
   }
   
   return user

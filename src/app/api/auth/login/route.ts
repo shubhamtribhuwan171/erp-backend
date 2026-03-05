@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { successResponse, errorResponse, unauthorizedResponse } from '@/lib/utils'
+import {successResponse, errorResponse, unauthorizedResponse, handleApiError } from '@/lib/utils'
 import { signAuthToken } from '@/lib/jwt'
 import bcrypt from 'bcryptjs'
 
@@ -71,6 +71,5 @@ export async function POST(request: NextRequest) {
     }, 'Login successful')
   } catch (error) {
     console.error('Login error:', error)
-    return errorResponse('Login failed')
-  }
+    return handleApiError(error, 'Login failed')}
 }

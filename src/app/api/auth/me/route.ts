@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAuthUser } from '@/lib/auth-rbac'
-import { successResponse, errorResponse } from '@/lib/utils'
+import {successResponse, errorResponse} from '@/lib/utils'
 
 // GET /api/auth/me - Get current user
 export async function GET(request: NextRequest) {

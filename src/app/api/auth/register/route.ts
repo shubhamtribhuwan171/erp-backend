@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import { successResponse, errorResponse } from '@/lib/utils'
+import {successResponse, errorResponse, handleApiError } from '@/lib/utils'
 import { signAuthToken } from '@/lib/jwt'
 import bcrypt from 'bcryptjs'
 
@@ -88,6 +88,5 @@ export async function POST(request: NextRequest) {
     }, 'Company created successfully')
   } catch (error) {
     console.error('Register error:', error)
-    return errorResponse('Registration failed')
-  }
+    return handleApiError(error, 'Registration failed')}
 }

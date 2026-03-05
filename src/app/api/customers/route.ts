@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse } from '@/lib/utils'
-import { generateNextCode } from '@/lib/utils'
+import { successResponse, errorResponse, handleApiError, generateNextCode } from '@/lib/utils'
 
 // GET /api/customers - List all customers
 export async function GET(request: NextRequest) {
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Get customers error:', error)
-    return errorResponse('Failed to fetch customers')
+    return handleApiError(error, 'Failed to fetch customers')
   }
 }
 
@@ -83,11 +82,8 @@ export async function POST(request: NextRequest) {
     if (error) throw error
 
     return successResponse(data, 'Customer created')
-  } catch (error: any) {
+  } catch (error) {
     console.error('Create customer error:', error)
-    if (error.message?.includes('Permission denied')) {
-      return errorResponse(error.message, 403)
-    }
-    return errorResponse('Failed to create customer')
+    return handleApiError(error, 'Failed to create customer')
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { successResponse } from '@/lib/utils'
+import {successResponse} from '@/lib/utils'
 
 // POST /api/auth/logout
 export async function POST() {

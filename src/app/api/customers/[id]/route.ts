@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse, notFoundResponse } from '@/lib/utils'
+import {successResponse, errorResponse, notFoundResponse, handleApiError } from '@/lib/utils'
 
 // GET /api/customers/[id] - Get single customer
 // PUT /api/customers/[id] - Update customer
@@ -32,8 +32,7 @@ export async function GET(
     return successResponse(data)
   } catch (error) {
     console.error('Get customer error:', error)
-    return errorResponse('Failed to fetch customer')
-  }
+    return handleApiError(error, 'Failed to fetch customer')}
 }
 
 export async function PUT(
@@ -71,8 +70,7 @@ export async function PUT(
     return successResponse(data, 'Customer updated')
   } catch (error) {
     console.error('Update customer error:', error)
-    return errorResponse('Failed to update customer')
-  }
+    return handleApiError(error, 'Failed to update customer')}
 }
 
 export async function DELETE(
@@ -97,6 +95,5 @@ export async function DELETE(
     return successResponse(null, 'Customer deleted')
   } catch (error) {
     console.error('Delete customer error:', error)
-    return errorResponse('Failed to delete customer')
-  }
+    return handleApiError(error, 'Failed to delete customer')}
 }

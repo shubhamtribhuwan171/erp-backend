@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse } from '@/lib/utils'
-import { generateNextCode } from '@/lib/utils'
+import { successResponse, handleApiError, generateNextCode } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ items: data || [], page, limit, total: count || 0 })
   } catch (error) {
     console.error('Failed to fetch items:', error)
-    return errorResponse('Failed to fetch items')
+    return handleApiError(error, 'Failed to fetch items')
   }
 }
 
@@ -76,6 +75,6 @@ export async function POST(request: NextRequest) {
     return successResponse(data, 'Item created')
   } catch (err) {
     console.error('Failed to create item:', err)
-    return errorResponse('Failed to create item')
+    return handleApiError(err, 'Failed to create item')
   }
 }

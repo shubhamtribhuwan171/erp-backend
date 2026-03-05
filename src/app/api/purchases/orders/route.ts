@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/auth-rbac'
 import { requireModuleEnabled } from '@/lib/features'
-import { successResponse, errorResponse } from '@/lib/utils'
-import { generateNextCode } from '@/lib/utils'
+import { successResponse, handleApiError, generateNextCode } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ orders: data || [], page, limit, total: count || 0 })
   } catch (error) {
     console.error('Failed to fetch purchase orders:', error)
-    return errorResponse('Failed to fetch orders')
+    return handleApiError(error, 'Failed to fetch orders')
   }
 }
 
@@ -120,6 +119,6 @@ export async function POST(request: NextRequest) {
     return successResponse(order, 'Purchase order created')
   } catch (err) {
     console.error('Create purchase order error:', err)
-    return errorResponse('Failed to create order')
+    return handleApiError(err, 'Failed to create order')
   }
 }
