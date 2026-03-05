@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyAdminToken } from '@/lib/admin-jwt'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAdminKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -20,39 +21,32 @@ export interface AdminUser {
 
 export async function requireAdmin(request: NextRequest): Promise<AdminUser | NextResponse> {
   const authHeader = request.headers.get('authorization')
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  
+
   const token = authHeader.replace('Bearer ', '')
-  
-  // Verify token against platform_admins
+  const payload = verifyAdminToken(token)
+
+  if (!payload) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  }
+
   const { data: admin, error } = await supabaseAdmin
     .from('platform_admins')
     .select('id, email, full_name, role, is_super_admin, is_active')
-    .eq('id', token)
+    .eq('id', payload.sub)
     .single()
-  
+
   if (error || !admin) {
-    // Try email-based lookup
-    const { data: adminByEmail } = await supabaseAdmin
-      .from('platform_admins')
-      .select('id, email, full_name, role, is_super_admin, is_active')
-      .eq('email', token)
-      .single()
-    
-    if (!adminByEmail || !adminByEmail.is_active) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-    }
-    
-    return adminByEmail as AdminUser
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
-  
+
   if (!admin.is_active) {
     return NextResponse.json({ error: 'Account disabled' }, { status: 403 })
   }
-  
+
   return admin as AdminUser
 }
 

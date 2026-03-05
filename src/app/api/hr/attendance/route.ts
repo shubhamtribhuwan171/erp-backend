@@ -9,12 +9,35 @@ export async function GET(request: NextRequest) {
     const user = await requirePermission(request, 'hr', 'read')
     await requireModuleEnabled(user.companyId, 'hr')
     const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('employees').select('id, name, department_id, departments!inner(name)')
-      .eq('company_id', user.companyId).eq('status', 'active')
-    if (error) throw error
-    return successResponse({ employees: data || [] })
-  } catch (err: any) { return errorResponse('Failed') }
+
+    const { searchParams } = new URL(request.url)
+    const date = searchParams.get('date') // yyyy-mm-dd
+
+    const { data: employees, error: empError } = await supabase
+      .from('employees')
+      .select('id, name, department_id, departments!inner(name)')
+      .eq('company_id', user.companyId)
+      .eq('status', 'active')
+
+    if (empError) throw empError
+
+    if (!date) {
+      return successResponse({ employees: employees || [] })
+    }
+
+    const { data: records, error: recError } = await supabase
+      .from('attendance_records')
+      .select('employee_id, status')
+      .eq('company_id', user.companyId)
+      .eq('attendance_date', date)
+
+    if (recError) throw recError
+
+    return successResponse({ employees: employees || [], records: records || [], date })
+  } catch (err: any) {
+    console.error('Attendance GET error:', err)
+    return errorResponse('Failed to load attendance', 400)
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -22,8 +45,32 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(request, 'hr', 'create')
     await requireModuleEnabled(user.companyId, 'hr')
     const supabase = await createClient()
+
     const body = await request.json()
-    // Attendance marking - would need attendance table
-    return successResponse(null, 'Attendance recorded')
-  } catch (err: any) { return errorResponse('Failed') }
+    const date = body?.date as string | undefined
+    const records = (body?.records ?? []) as Array<{ employee_id: string; status: 'present' | 'absent' | 'leave' }>
+
+    if (!date) return errorResponse('date is required', 400)
+    if (!Array.isArray(records)) return errorResponse('records must be an array', 400)
+
+    // upsert attendance per employee/day
+    const payload = records.map((r) => ({
+      company_id: user.companyId,
+      employee_id: r.employee_id,
+      attendance_date: date,
+      status: r.status,
+      created_by_user_id: user.id,
+    }))
+
+    const { error } = await supabase
+      .from('attendance_records')
+      .upsert(payload, { onConflict: 'company_id,employee_id,attendance_date' })
+
+    if (error) throw error
+
+    return successResponse({ date, count: payload.length }, 'Attendance recorded')
+  } catch (err: any) {
+    console.error('Attendance POST error:', err)
+    return errorResponse('Failed to record attendance', 400)
+  }
 }

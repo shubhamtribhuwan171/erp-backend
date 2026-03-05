@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
+import { signAdminToken } from '@/lib/admin-jwt'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAdminKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -80,12 +81,19 @@ export async function POST(request: NextRequest) {
     // Return admin info (not password hash)
     const { password_hash, ...adminWithoutPassword } = admin
     
+    const token = signAdminToken({
+      sub: admin.id,
+      email: admin.email,
+      role: admin.role,
+      isSuperAdmin: Boolean(admin.is_super_admin),
+    })
+
     return NextResponse.json({
       success: true,
       message: 'Login successful',
       data: {
         ...adminWithoutPassword,
-        token: admin.id, // Use ID as simple token
+        token,
       },
     })
   } catch (error) {
