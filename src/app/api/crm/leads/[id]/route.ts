@@ -20,7 +20,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .single()
 
     if (error || !data) return errorResponse('Lead not found', 404)
-    return successResponse(data)
+
+    // Get quotations sent to this lead
+    const { data: quotations } = await supabase
+      .from('sales_orders')
+      .select('id, order_no, order_date, status, total_minor')
+      .eq('customer_id', id)
+      .eq('company_id', user.companyId)
+      .eq('status', 'quotation')
+      .order('created_at', { ascending: false })
+
+    // Get orders (if converted)
+    const { data: orders } = await supabase
+      .from('sales_orders')
+      .select('id, order_no, order_date, status, total_minor')
+      .eq('customer_id', id)
+      .eq('company_id', user.companyId)
+      .neq('status', 'quotation')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    return successResponse({
+      ...data,
+      quotations: quotations || [],
+      orders: orders || [],
+    })
   } catch (err: any) {
     console.error('Get lead error:', err)
     return errorResponse('Failed')
