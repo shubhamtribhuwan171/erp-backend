@@ -43,6 +43,12 @@ export async function GET(
     return successResponse({
       ...order,
       items: items || [],
+      totals: {
+        subtotal_minor: order.subtotal_minor ?? 0,
+        discount_minor: order.discount_minor ?? 0,
+        tax_minor: order.tax_minor ?? 0,
+        total_minor: order.total_minor ?? 0,
+      },
     })
   } catch (error) {
     console.error('Get order error:', error)
